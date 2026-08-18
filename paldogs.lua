@@ -19,7 +19,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 --==================================================
 
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 320, 0, 425)
+main.Size = UDim2.new(0, 320, 0, 475)
 main.Position = UDim2.new(0.5, -160, 0.1, 0)
 main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 main.BorderSizePixel = 0
@@ -110,23 +110,37 @@ end
 -- POSITION BUTTONS
 --==================================================
 
-local save = createButton(
-    "SAVE POSITION",
+local save1 = createButton(
+    "SAVE POSITION 1",
     10, 70,
     145, 42,
     Color3.fromRGB(55, 170, 90)
 )
 
-local teleport = createButton(
-    "TELEPORT",
+local teleport1 = createButton(
+    "TELEPORT 1",
     165, 70,
     145, 42,
     Color3.fromRGB(55, 125, 230)
 )
 
-local clear = createButton(
-    "CLEAR POSITION",
+local save2 = createButton(
+    "SAVE POSITION 2",
     10, 120,
+    145, 42,
+    Color3.fromRGB(55, 170, 90)
+)
+
+local teleport2 = createButton(
+    "TELEPORT 2",
+    165, 120,
+    145, 42,
+    Color3.fromRGB(55, 125, 230)
+)
+
+local clear = createButton(
+    "CLEAR POSITIONS",
+    10, 170,
     300, 35,
     Color3.fromRGB(190, 55, 65)
 )
@@ -137,28 +151,28 @@ local clear = createButton(
 
 local fpsBoost = createButton(
     "FPS BOOST",
-    10, 170,
+    10, 220,
     145, 42,
     Color3.fromRGB(40, 180, 100)
 )
 
 local normalGraphics = createButton(
     "NORMAL",
-    165, 170,
+    165, 220,
     145, 42,
     Color3.fromRGB(55, 125, 230)
 )
 
 local removeEffects = createButton(
     "REMOVE EFFECTS",
-    10, 220,
+    10, 270,
     145, 42,
     Color3.fromRGB(120, 80, 180)
 )
 
 local lowGraphics = createButton(
     "LOW GRAPHICS",
-    165, 220,
+    165, 270,
     145, 42,
     Color3.fromRGB(190, 120, 55)
 )
@@ -169,7 +183,7 @@ local lowGraphics = createButton(
 
 local instantE = createButton(
     "INSTANT E: OFF",
-    10, 270,
+    10, 320,
     300, 42,
     Color3.fromRGB(90, 90, 100)
 )
@@ -180,7 +194,7 @@ local instantE = createButton(
 
 local floatButton = createButton(
     "FLOAT: OFF",
-    10, 325,
+    10, 375,
     300, 42,
     Color3.fromRGB(90, 90, 100)
 )
@@ -191,7 +205,7 @@ local floatButton = createButton(
 
 local leave = createButton(
     "LEAVE GAME",
-    10, 380,
+    10, 430,
     300, 35,
     Color3.fromRGB(190, 55, 65)
 )
@@ -232,7 +246,7 @@ minimize.MouseButton1Click:Connect(function()
 
     else
 
-        main.Size = UDim2.new(0, 320, 0, 425)
+        main.Size = UDim2.new(0, 320, 0, 475)
 
         title.Visible = true
 
@@ -253,10 +267,11 @@ minimize.MouseButton1Click:Connect(function()
 end)
 
 --==================================================
--- SAVED POSITION
+-- SAVED POSITIONS
 --==================================================
 
-local savedCFrame = nil
+local savedCFrame1 = nil
+local savedCFrame2 = nil
 
 --==================================================
 -- GRAPHICS SETTINGS
@@ -293,15 +308,15 @@ local function makePromptInstant(prompt)
 end
 
 --==================================================
--- SAVE POSITION
+-- SAVE POSITION 1
 --==================================================
 
-save.MouseButton1Click:Connect(function()
+save1.MouseButton1Click:Connect(function()
 
     local character = player.Character
 
     if not character then
-        status.Text = "Character not found"
+        status.Text = "Character not found!"
         return
     end
 
@@ -309,30 +324,30 @@ save.MouseButton1Click:Connect(function()
 
     if root then
 
-        savedCFrame = root.CFrame
+        savedCFrame1 = root.CFrame
 
-        status.Text = "Position saved!"
+        status.Text = "Position 1 saved!"
         status.TextColor3 = Color3.fromRGB(80, 220, 120)
 
-        save.Text = "SAVED!"
+        save1.Text = "POSITION 1 SAVED!"
 
         task.wait(1)
 
-        save.Text = "SAVE POSITION"
+        save1.Text = "SAVE POSITION 1"
 
     end
 
 end)
 
 --==================================================
--- TELEPORT
+-- TELEPORT 1
 --==================================================
 
-teleport.MouseButton1Click:Connect(function()
+teleport1.MouseButton1Click:Connect(function()
 
-    if not savedCFrame then
+    if not savedCFrame1 then
 
-        status.Text = "No position saved!"
+        status.Text = "Position 1 not saved!"
         status.TextColor3 = Color3.fromRGB(255, 100, 100)
 
         return
@@ -361,31 +376,117 @@ teleport.MouseButton1Click:Connect(function()
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
 
-    character:PivotTo(savedCFrame)
+    character:PivotTo(savedCFrame1)
 
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
 
-    status.Text = "Teleported!"
+    status.Text = "Teleported to Position 1!"
     status.TextColor3 = Color3.fromRGB(80, 170, 255)
 
-    teleport.Text = "TELEPORTED!"
+    teleport1.Text = "TELEPORTED 1!"
 
     task.wait(1)
 
-    teleport.Text = "TELEPORT"
+    teleport1.Text = "TELEPORT 1"
 
 end)
 
 --==================================================
--- CLEAR POSITION
+-- SAVE POSITION 2
+--==================================================
+
+save2.MouseButton1Click:Connect(function()
+
+    local character = player.Character
+
+    if not character then
+        status.Text = "Character not found!"
+        return
+    end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+
+    if root then
+
+        savedCFrame2 = root.CFrame
+
+        status.Text = "Position 2 saved!"
+        status.TextColor3 = Color3.fromRGB(80, 220, 120)
+
+        save2.Text = "POSITION 2 SAVED!"
+
+        task.wait(1)
+
+        save2.Text = "SAVE POSITION 2"
+
+    end
+
+end)
+
+--==================================================
+-- TELEPORT 2
+--==================================================
+
+teleport2.MouseButton1Click:Connect(function()
+
+    if not savedCFrame2 then
+
+        status.Text = "Position 2 not saved!"
+        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+
+        return
+
+    end
+
+    local character = player.Character
+
+    if not character then
+
+        status.Text = "Character not found!"
+        return
+
+    end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local root = character:FindFirstChild("HumanoidRootPart")
+
+    if not root or not humanoid then
+
+        status.Text = "Character parts not found!"
+        return
+
+    end
+
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+
+    character:PivotTo(savedCFrame2)
+
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+
+    status.Text = "Teleported to Position 2!"
+    status.TextColor3 = Color3.fromRGB(80, 170, 255)
+
+    teleport2.Text = "TELEPORTED 2!"
+
+    task.wait(1)
+
+    teleport2.Text = "TELEPORT 2"
+
+end)
+
+--==================================================
+-- CLEAR BOTH POSITIONS
 --==================================================
 
 clear.MouseButton1Click:Connect(function()
 
-    savedCFrame = nil
+    savedCFrame1 = nil
+    savedCFrame2 = nil
 
-    status.Text = "Position cleared"
+    status.Text = "Both positions cleared"
     status.TextColor3 = Color3.fromRGB(255, 100, 100)
 
 end)
@@ -676,14 +777,12 @@ local function toggleFloat()
 
             local position = currentRoot.Position
 
-            -- Stop vertical falling
             currentRoot.AssemblyLinearVelocity = Vector3.new(
                 currentRoot.AssemblyLinearVelocity.X,
                 0,
                 currentRoot.AssemblyLinearVelocity.Z
             )
 
-            -- Keep character at the floating height
             currentRoot.CFrame =
                 CFrame.new(
                     position.X,
