@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
@@ -207,8 +208,6 @@ minimize.MouseButton1Click:Connect(function()
 
     if minimized then
 
-        -- Hide everything except minimize button
-
         for _, object in ipairs(main:GetChildren()) do
 
             if object ~= corner
@@ -223,13 +222,9 @@ minimize.MouseButton1Click:Connect(function()
 
         end
 
-        -- Make menu small
-
         main.Size = UDim2.new(0, 55, 0, 45)
 
         title.Visible = false
-
-        -- Change to +
 
         minimize.Size = UDim2.new(0, 40, 0, 35)
         minimize.Position = UDim2.new(0, 7, 0, 5)
@@ -237,13 +232,9 @@ minimize.MouseButton1Click:Connect(function()
 
     else
 
-        -- Restore menu
-
         main.Size = UDim2.new(0, 320, 0, 425)
 
         title.Visible = true
-
-        -- Show everything
 
         for _, object in ipairs(main:GetChildren()) do
 
@@ -252,8 +243,6 @@ minimize.MouseButton1Click:Connect(function()
             end
 
         end
-
-        -- Restore minimize button
 
         minimize.Size = UDim2.new(0, 35, 0, 30)
         minimize.Position = UDim2.new(1, -45, 0, 8)
@@ -288,8 +277,6 @@ local savedLighting = {
 local instantEEnabled = false
 local originalHoldDurations = {}
 
--- Save original HoldDuration
-
 local function savePromptDuration(prompt)
 
     if originalHoldDurations[prompt] == nil then
@@ -297,8 +284,6 @@ local function savePromptDuration(prompt)
     end
 
 end
-
--- Make prompt instant
 
 local function makePromptInstant(prompt)
 
@@ -344,34 +329,40 @@ end)
 --==================================================
 
 teleport.MouseButton1Click:Connect(function()
+
     if not savedCFrame then
+
         status.Text = "No position saved!"
         status.TextColor3 = Color3.fromRGB(255, 100, 100)
+
         return
+
     end
 
     local character = player.Character
+
     if not character then
+
         status.Text = "Character not found!"
         return
+
     end
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local root = character:FindFirstChild("HumanoidRootPart")
 
     if not root or not humanoid then
+
         status.Text = "Character parts not found!"
         return
+
     end
 
-    -- Stop current movement
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
 
-    -- Teleport the entire character
     character:PivotTo(savedCFrame)
 
-    -- Stop movement after teleport
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
 
@@ -379,8 +370,11 @@ teleport.MouseButton1Click:Connect(function()
     status.TextColor3 = Color3.fromRGB(80, 170, 255)
 
     teleport.Text = "TELEPORTED!"
+
     task.wait(1)
+
     teleport.Text = "TELEPORT"
+
 end)
 
 --==================================================
@@ -573,8 +567,6 @@ instantE.MouseButton1Click:Connect(function()
 
     if instantEEnabled then
 
-        -- Make all existing prompts instant
-
         for _, object in ipairs(workspace:GetDescendants()) do
 
             if object:IsA("ProximityPrompt") then
@@ -590,8 +582,6 @@ instantE.MouseButton1Click:Connect(function()
         status.TextColor3 = Color3.fromRGB(80, 220, 120)
 
     else
-
-        -- Restore original HoldDuration
 
         for prompt, duration in pairs(originalHoldDurations) do
 
@@ -631,9 +621,7 @@ local floatEnabled = false
 local floatConnection = nil
 local floatHeight = nil
 
-local RunService = game:GetService("RunService")
-
-floatButton.MouseButton1Click:Connect(function()
+local function toggleFloat()
 
     floatEnabled = not floatEnabled
 
@@ -643,22 +631,25 @@ floatButton.MouseButton1Click:Connect(function()
     if floatEnabled then
 
         if not root then
+
             floatEnabled = false
+
             status.Text = "Character not found!"
             status.TextColor3 = Color3.fromRGB(255, 100, 100)
+
             return
+
         end
 
-        -- Save the current height
+        -- Approximately 10 meters / 33 studs above current position
         floatHeight = root.Position.Y + 33
 
         floatButton.Text = "FLOAT: ON"
         floatButton.BackgroundColor3 = Color3.fromRGB(55, 170, 90)
 
-        status.Text = "Float enabled"
+        status.Text = "Float enabled [T]"
         status.TextColor3 = Color3.fromRGB(80, 220, 120)
 
-        -- Remove old connection if there is one
         if floatConnection then
             floatConnection:Disconnect()
             floatConnection = nil
@@ -683,20 +674,23 @@ floatButton.MouseButton1Click:Connect(function()
                 return
             end
 
-            -- Keep the character at the saved height
             local position = currentRoot.Position
 
+            -- Stop vertical falling
             currentRoot.AssemblyLinearVelocity = Vector3.new(
                 currentRoot.AssemblyLinearVelocity.X,
                 0,
                 currentRoot.AssemblyLinearVelocity.Z
             )
 
-            currentRoot.CFrame = CFrame.new(
-                position.X,
-                floatHeight,
-                position.Z
-            ) * (currentRoot.CFrame - currentRoot.CFrame.Position)
+            -- Keep character at the floating height
+            currentRoot.CFrame =
+                CFrame.new(
+                    position.X,
+                    floatHeight,
+                    position.Z
+                )
+                * (currentRoot.CFrame - currentRoot.CFrame.Position)
 
         end)
 
@@ -714,6 +708,34 @@ floatButton.MouseButton1Click:Connect(function()
 
         status.Text = "Float disabled"
         status.TextColor3 = Color3.fromRGB(150, 150, 160)
+
+    end
+
+end
+
+--==================================================
+-- FLOAT GUI BUTTON
+--==================================================
+
+floatButton.MouseButton1Click:Connect(function()
+
+    toggleFloat()
+
+end)
+
+--==================================================
+-- FLOAT T KEY
+--==================================================
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+
+    if gameProcessed then
+        return
+    end
+
+    if input.KeyCode == Enum.KeyCode.T then
+
+        toggleFloat()
 
     end
 
