@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -17,7 +18,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 --==================================================
 
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 320, 0, 410)
+main.Size = UDim2.new(0, 320, 0, 425)
 main.Position = UDim2.new(0.5, -160, 0.1, 0)
 main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 main.BorderSizePixel = 0
@@ -84,23 +85,24 @@ status.Parent = main
 
 local function createButton(text, x, y, width, height, color)
 
-	local button = Instance.new("TextButton")
+    local button = Instance.new("TextButton")
 
-	button.Size = UDim2.new(0, width, 0, height)
-	button.Position = UDim2.new(0, x, 0, y)
-	button.BackgroundColor3 = color
-	button.BorderSizePixel = 0
-	button.Text = text
-	button.TextColor3 = Color3.new(1, 1, 1)
-	button.TextSize = 13
-	button.Font = Enum.Font.GothamBold
-	button.Parent = main
+    button.Size = UDim2.new(0, width, 0, height)
+    button.Position = UDim2.new(0, x, 0, y)
+    button.BackgroundColor3 = color
+    button.BorderSizePixel = 0
+    button.Text = text
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.TextSize = 13
+    button.Font = Enum.Font.GothamBold
+    button.Parent = main
 
-	local buttonCorner = Instance.new("UICorner")
-	buttonCorner.CornerRadius = UDim.new(0, 9)
-	buttonCorner.Parent = button
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 9)
+    buttonCorner.Parent = button
 
-	return button
+    return button
+
 end
 
 --==================================================
@@ -108,24 +110,24 @@ end
 --==================================================
 
 local save = createButton(
-	"SAVE POSITION",
-	10, 70,
-	145, 42,
-	Color3.fromRGB(55, 170, 90)
+    "SAVE POSITION",
+    10, 70,
+    145, 42,
+    Color3.fromRGB(55, 170, 90)
 )
 
 local teleport = createButton(
-	"TELEPORT",
-	165, 70,
-	145, 42,
-	Color3.fromRGB(55, 125, 230)
+    "TELEPORT",
+    165, 70,
+    145, 42,
+    Color3.fromRGB(55, 125, 230)
 )
 
 local clear = createButton(
-	"CLEAR POSITION",
-	10, 120,
-	300, 35,
-	Color3.fromRGB(190, 55, 65)
+    "CLEAR POSITION",
+    10, 120,
+    300, 35,
+    Color3.fromRGB(190, 55, 65)
 )
 
 --==================================================
@@ -133,31 +135,31 @@ local clear = createButton(
 --==================================================
 
 local fpsBoost = createButton(
-	"FPS BOOST",
-	10, 170,
-	145, 42,
-	Color3.fromRGB(40, 180, 100)
+    "FPS BOOST",
+    10, 170,
+    145, 42,
+    Color3.fromRGB(40, 180, 100)
 )
 
 local normalGraphics = createButton(
-	"NORMAL",
-	165, 170,
-	145, 42,
-	Color3.fromRGB(55, 125, 230)
+    "NORMAL",
+    165, 170,
+    145, 42,
+    Color3.fromRGB(55, 125, 230)
 )
 
 local removeEffects = createButton(
-	"REMOVE EFFECTS",
-	10, 220,
-	145, 42,
-	Color3.fromRGB(120, 80, 180)
+    "REMOVE EFFECTS",
+    10, 220,
+    145, 42,
+    Color3.fromRGB(120, 80, 180)
 )
 
 local lowGraphics = createButton(
-	"LOW GRAPHICS",
-	165, 220,
-	145, 42,
-	Color3.fromRGB(190, 120, 55)
+    "LOW GRAPHICS",
+    165, 220,
+    145, 42,
+    Color3.fromRGB(190, 120, 55)
 )
 
 --==================================================
@@ -165,10 +167,21 @@ local lowGraphics = createButton(
 --==================================================
 
 local instantE = createButton(
-	"INSTANT E: OFF",
-	10, 270,
-	300, 42,
-	Color3.fromRGB(90, 90, 100)
+    "INSTANT E: OFF",
+    10, 270,
+    300, 42,
+    Color3.fromRGB(90, 90, 100)
+)
+
+--==================================================
+-- FLOAT
+--==================================================
+
+local floatButton = createButton(
+    "FLOAT: OFF",
+    10, 325,
+    300, 42,
+    Color3.fromRGB(90, 90, 100)
 )
 
 --==================================================
@@ -176,10 +189,10 @@ local instantE = createButton(
 --==================================================
 
 local leave = createButton(
-	"LEAVE GAME",
-	10, 325,
-	300, 35,
-	Color3.fromRGB(190, 55, 65)
+    "LEAVE GAME",
+    10, 380,
+    300, 35,
+    Color3.fromRGB(190, 55, 65)
 )
 
 --==================================================
@@ -190,55 +203,64 @@ local minimized = false
 
 minimize.MouseButton1Click:Connect(function()
 
-	minimized = not minimized
+    minimized = not minimized
 
-	if minimized then
+    if minimized then
 
-		-- Hide everything except minimize button
-		for _, object in ipairs(main:GetChildren()) do
+        -- Hide everything except minimize button
 
-			if object ~= corner
-				and object ~= title
-				and object ~= minimize then
+        for _, object in ipairs(main:GetChildren()) do
 
-				if object:IsA("GuiObject") then
-					object.Visible = false
-				end
+            if object ~= corner
+                and object ~= title
+                and object ~= minimize then
 
-			end
-		end
+                if object:IsA("GuiObject") then
+                    object.Visible = false
+                end
 
-		-- Make menu small
-		main.Size = UDim2.new(0, 55, 0, 45)
+            end
 
-		title.Visible = false
+        end
 
-		-- Change to +
-		minimize.Size = UDim2.new(0, 40, 0, 35)
-		minimize.Position = UDim2.new(0, 7, 0, 5)
-		minimize.Text = "+"
+        -- Make menu small
 
-	else
+        main.Size = UDim2.new(0, 55, 0, 45)
 
-		-- Restore menu
-		main.Size = UDim2.new(0, 320, 0, 410)
+        title.Visible = false
 
-		title.Visible = true
+        -- Change to +
 
-		-- Show everything
-		for _, object in ipairs(main:GetChildren()) do
+        minimize.Size = UDim2.new(0, 40, 0, 35)
+        minimize.Position = UDim2.new(0, 7, 0, 5)
+        minimize.Text = "+"
 
-			if object:IsA("GuiObject") then
-				object.Visible = true
-			end
+    else
 
-		end
+        -- Restore menu
 
-		-- Restore minimize button
-		minimize.Size = UDim2.new(0, 35, 0, 30)
-		minimize.Position = UDim2.new(1, -45, 0, 8)
-		minimize.Text = "−"
-	end
+        main.Size = UDim2.new(0, 320, 0, 425)
+
+        title.Visible = true
+
+        -- Show everything
+
+        for _, object in ipairs(main:GetChildren()) do
+
+            if object:IsA("GuiObject") then
+                object.Visible = true
+            end
+
+        end
+
+        -- Restore minimize button
+
+        minimize.Size = UDim2.new(0, 35, 0, 30)
+        minimize.Position = UDim2.new(1, -45, 0, 8)
+        minimize.Text = "−"
+
+    end
+
 end)
 
 --==================================================
@@ -254,9 +276,9 @@ local savedCFrame = nil
 local savedEffects = {}
 
 local savedLighting = {
-	GlobalShadows = Lighting.GlobalShadows,
-	Brightness = Lighting.Brightness,
-	FogEnd = Lighting.FogEnd
+    GlobalShadows = Lighting.GlobalShadows,
+    Brightness = Lighting.Brightness,
+    FogEnd = Lighting.FogEnd
 }
 
 --==================================================
@@ -267,20 +289,22 @@ local instantEEnabled = false
 local originalHoldDurations = {}
 
 -- Save original HoldDuration
+
 local function savePromptDuration(prompt)
 
-	if originalHoldDurations[prompt] == nil then
-		originalHoldDurations[prompt] = prompt.HoldDuration
-	end
+    if originalHoldDurations[prompt] == nil then
+        originalHoldDurations[prompt] = prompt.HoldDuration
+    end
 
 end
 
 -- Make prompt instant
+
 local function makePromptInstant(prompt)
 
-	savePromptDuration(prompt)
+    savePromptDuration(prompt)
+    prompt.HoldDuration = 0
 
-	prompt.HoldDuration = 0
 end
 
 --==================================================
@@ -289,28 +313,30 @@ end
 
 save.MouseButton1Click:Connect(function()
 
-	local character = player.Character
+    local character = player.Character
 
-	if not character then
-		status.Text = "Character not found"
-		return
-	end
+    if not character then
+        status.Text = "Character not found"
+        return
+    end
 
-	local root = character:FindFirstChild("HumanoidRootPart")
+    local root = character:FindFirstChild("HumanoidRootPart")
 
-	if root then
+    if root then
 
-		savedCFrame = root.CFrame
+        savedCFrame = root.CFrame
 
-		status.Text = "Position saved!"
-		status.TextColor3 = Color3.fromRGB(80, 220, 120)
+        status.Text = "Position saved!"
+        status.TextColor3 = Color3.fromRGB(80, 220, 120)
 
-		save.Text = "SAVED!"
+        save.Text = "SAVED!"
 
-		task.wait(1)
+        task.wait(1)
 
-		save.Text = "SAVE POSITION"
-	end
+        save.Text = "SAVE POSITION"
+
+    end
+
 end)
 
 --==================================================
@@ -318,36 +344,43 @@ end)
 --==================================================
 
 teleport.MouseButton1Click:Connect(function()
+    if not savedCFrame then
+        status.Text = "No position saved!"
+        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
 
-	if not savedCFrame then
+    local character = player.Character
+    if not character then
+        status.Text = "Character not found!"
+        return
+    end
 
-		status.Text = "No position saved!"
-		status.TextColor3 = Color3.fromRGB(255, 100, 100)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local root = character:FindFirstChild("HumanoidRootPart")
 
-		return
-	end
+    if not root or not humanoid then
+        status.Text = "Character parts not found!"
+        return
+    end
 
-	local character = player.Character
+    -- Stop current movement
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
 
-	if not character then
-		return
-	end
+    -- Teleport the entire character
+    character:PivotTo(savedCFrame)
 
-	local root = character:FindFirstChild("HumanoidRootPart")
+    -- Stop movement after teleport
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
 
-	if root then
+    status.Text = "Teleported!"
+    status.TextColor3 = Color3.fromRGB(80, 170, 255)
 
-		root.CFrame = savedCFrame
-
-		status.Text = "Teleported!"
-		status.TextColor3 = Color3.fromRGB(80, 170, 255)
-
-		teleport.Text = "TELEPORTED!"
-
-		task.wait(1)
-
-		teleport.Text = "TELEPORT"
-	end
+    teleport.Text = "TELEPORTED!"
+    task.wait(1)
+    teleport.Text = "TELEPORT"
 end)
 
 --==================================================
@@ -356,10 +389,11 @@ end)
 
 clear.MouseButton1Click:Connect(function()
 
-	savedCFrame = nil
+    savedCFrame = nil
 
-	status.Text = "Position cleared"
-	status.TextColor3 = Color3.fromRGB(255, 100, 100)
+    status.Text = "Position cleared"
+    status.TextColor3 = Color3.fromRGB(255, 100, 100)
+
 end)
 
 --==================================================
@@ -368,13 +402,14 @@ end)
 
 local function saveEffect(object)
 
-	if savedEffects[object] == nil then
+    if savedEffects[object] == nil then
 
-		savedEffects[object] = {
-			Enabled = object.Enabled
-		}
+        savedEffects[object] = {
+            Enabled = object.Enabled
+        }
 
-	end
+    end
+
 end
 
 --==================================================
@@ -383,41 +418,46 @@ end
 
 local function enableFPSBoost()
 
-	Lighting.GlobalShadows = false
+    Lighting.GlobalShadows = false
 
-	for _, object in ipairs(Lighting:GetChildren()) do
+    for _, object in ipairs(Lighting:GetChildren()) do
 
-		if object:IsA("BloomEffect")
-			or object:IsA("BlurEffect")
-			or object:IsA("ColorCorrectionEffect")
-			or object:IsA("SunRaysEffect")
-			or object:IsA("DepthOfFieldEffect") then
+        if object:IsA("BloomEffect")
+            or object:IsA("BlurEffect")
+            or object:IsA("ColorCorrectionEffect")
+            or object:IsA("SunRaysEffect")
+            or object:IsA("DepthOfFieldEffect") then
 
-			saveEffect(object)
+            saveEffect(object)
 
-			object.Enabled = false
-		end
-	end
+            object.Enabled = false
 
-	for _, object in ipairs(workspace:GetDescendants()) do
+        end
 
-		if object:IsA("ParticleEmitter")
-			or object:IsA("Trail")
-			or object:IsA("Beam")
-			or object:IsA("Smoke")
-			or object:IsA("Fire")
-			or object:IsA("Sparkles") then
+    end
 
-			saveEffect(object)
+    for _, object in ipairs(workspace:GetDescendants()) do
 
-			object.Enabled = false
-		end
-	end
+        if object:IsA("ParticleEmitter")
+            or object:IsA("Trail")
+            or object:IsA("Beam")
+            or object:IsA("Smoke")
+            or object:IsA("Fire")
+            or object:IsA("Sparkles") then
 
-	status.Text = "FPS Boost enabled"
-	status.TextColor3 = Color3.fromRGB(80, 220, 120)
+            saveEffect(object)
 
-	fpsBoost.Text = "BOOST ON"
+            object.Enabled = false
+
+        end
+
+    end
+
+    status.Text = "FPS Boost enabled"
+    status.TextColor3 = Color3.fromRGB(80, 220, 120)
+
+    fpsBoost.Text = "BOOST ON"
+
 end
 
 --==================================================
@@ -426,23 +466,23 @@ end
 
 local function restoreGraphics()
 
-	Lighting.GlobalShadows = savedLighting.GlobalShadows
-	Lighting.Brightness = savedLighting.Brightness
-	Lighting.FogEnd = savedLighting.FogEnd
+    Lighting.GlobalShadows = savedLighting.GlobalShadows
+    Lighting.Brightness = savedLighting.Brightness
+    Lighting.FogEnd = savedLighting.FogEnd
 
-	for object, settings in pairs(savedEffects) do
+    for object, settings in pairs(savedEffects) do
 
-		if object and object.Parent then
+        if object and object.Parent then
+            object.Enabled = settings.Enabled
+        end
 
-			object.Enabled = settings.Enabled
+    end
 
-		end
-	end
+    status.Text = "Normal graphics"
+    status.TextColor3 = Color3.fromRGB(80, 170, 255)
 
-	status.Text = "Normal graphics"
-	status.TextColor3 = Color3.fromRGB(80, 170, 255)
+    fpsBoost.Text = "FPS BOOST"
 
-	fpsBoost.Text = "FPS BOOST"
 end
 
 --==================================================
@@ -451,33 +491,38 @@ end
 
 removeEffects.MouseButton1Click:Connect(function()
 
-	for _, object in ipairs(workspace:GetDescendants()) do
+    for _, object in ipairs(workspace:GetDescendants()) do
 
-		if object:IsA("ParticleEmitter")
-			or object:IsA("Trail")
-			or object:IsA("Beam")
-			or object:IsA("Smoke")
-			or object:IsA("Fire")
-			or object:IsA("Sparkles") then
+        if object:IsA("ParticleEmitter")
+            or object:IsA("Trail")
+            or object:IsA("Beam")
+            or object:IsA("Smoke")
+            or object:IsA("Fire")
+            or object:IsA("Sparkles") then
 
-			object.Enabled = false
-		end
-	end
+            object.Enabled = false
 
-	for _, object in ipairs(Lighting:GetChildren()) do
+        end
 
-		if object:IsA("BloomEffect")
-			or object:IsA("BlurEffect")
-			or object:IsA("ColorCorrectionEffect")
-			or object:IsA("SunRaysEffect")
-			or object:IsA("DepthOfFieldEffect") then
+    end
 
-			object.Enabled = false
-		end
-	end
+    for _, object in ipairs(Lighting:GetChildren()) do
 
-	status.Text = "Effects removed"
-	status.TextColor3 = Color3.fromRGB(180, 140, 255)
+        if object:IsA("BloomEffect")
+            or object:IsA("BlurEffect")
+            or object:IsA("ColorCorrectionEffect")
+            or object:IsA("SunRaysEffect")
+            or object:IsA("DepthOfFieldEffect") then
+
+            object.Enabled = false
+
+        end
+
+    end
+
+    status.Text = "Effects removed"
+    status.TextColor3 = Color3.fromRGB(180, 140, 255)
+
 end)
 
 --==================================================
@@ -486,22 +531,24 @@ end)
 
 lowGraphics.MouseButton1Click:Connect(function()
 
-	enableFPSBoost()
+    enableFPSBoost()
 
-	for _, object in ipairs(workspace:GetDescendants()) do
+    for _, object in ipairs(workspace:GetDescendants()) do
 
-		if object:IsA("BasePart") then
+        if object:IsA("BasePart") then
 
-			object.CastShadow = false
-			object.Material = Enum.Material.SmoothPlastic
+            object.CastShadow = false
+            object.Material = Enum.Material.SmoothPlastic
 
-		end
-	end
+        end
 
-	status.Text = "Low graphics enabled"
-	status.TextColor3 = Color3.fromRGB(255, 170, 80)
+    end
 
-	lowGraphics.Text = "LOW ON"
+    status.Text = "Low graphics enabled"
+    status.TextColor3 = Color3.fromRGB(255, 170, 80)
+
+    lowGraphics.Text = "LOW ON"
+
 end)
 
 --==================================================
@@ -510,9 +557,10 @@ end)
 
 normalGraphics.MouseButton1Click:Connect(function()
 
-	restoreGraphics()
+    restoreGraphics()
 
-	status.Text = "Normal graphics restored"
+    status.Text = "Normal graphics restored"
+
 end)
 
 --==================================================
@@ -521,42 +569,46 @@ end)
 
 instantE.MouseButton1Click:Connect(function()
 
-	instantEEnabled = not instantEEnabled
+    instantEEnabled = not instantEEnabled
 
-	if instantEEnabled then
+    if instantEEnabled then
 
-		-- Make all existing prompts instant
-		for _, object in ipairs(workspace:GetDescendants()) do
+        -- Make all existing prompts instant
 
-			if object:IsA("ProximityPrompt") then
-				makePromptInstant(object)
-			end
+        for _, object in ipairs(workspace:GetDescendants()) do
 
-		end
+            if object:IsA("ProximityPrompt") then
+                makePromptInstant(object)
+            end
 
-		instantE.Text = "INSTANT E: ON"
-		instantE.BackgroundColor3 = Color3.fromRGB(55, 170, 90)
+        end
 
-		status.Text = "Instant E enabled"
-		status.TextColor3 = Color3.fromRGB(80, 220, 120)
+        instantE.Text = "INSTANT E: ON"
+        instantE.BackgroundColor3 = Color3.fromRGB(55, 170, 90)
 
-	else
+        status.Text = "Instant E enabled"
+        status.TextColor3 = Color3.fromRGB(80, 220, 120)
 
-		-- Restore original HoldDuration
-		for prompt, duration in pairs(originalHoldDurations) do
+    else
 
-			if prompt and prompt.Parent then
-				prompt.HoldDuration = duration
-			end
+        -- Restore original HoldDuration
 
-		end
+        for prompt, duration in pairs(originalHoldDurations) do
 
-		instantE.Text = "INSTANT E: OFF"
-		instantE.BackgroundColor3 = Color3.fromRGB(90, 90, 100)
+            if prompt and prompt.Parent then
+                prompt.HoldDuration = duration
+            end
 
-		status.Text = "Instant E disabled"
-		status.TextColor3 = Color3.fromRGB(150, 150, 160)
-	end
+        end
+
+        instantE.Text = "INSTANT E: OFF"
+        instantE.BackgroundColor3 = Color3.fromRGB(90, 90, 100)
+
+        status.Text = "Instant E disabled"
+        status.TextColor3 = Color3.fromRGB(150, 150, 160)
+
+    end
+
 end)
 
 --==================================================
@@ -565,11 +617,106 @@ end)
 
 workspace.DescendantAdded:Connect(function(object)
 
-	if object:IsA("ProximityPrompt") and instantEEnabled then
+    if object:IsA("ProximityPrompt") and instantEEnabled then
+        makePromptInstant(object)
+    end
 
-		makePromptInstant(object)
+end)
 
-	end
+--==================================================
+-- FLOAT
+--==================================================
+
+local floatEnabled = false
+local floatConnection = nil
+local floatHeight = nil
+
+local RunService = game:GetService("RunService")
+
+floatButton.MouseButton1Click:Connect(function()
+
+    floatEnabled = not floatEnabled
+
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+
+    if floatEnabled then
+
+        if not root then
+            floatEnabled = false
+            status.Text = "Character not found!"
+            status.TextColor3 = Color3.fromRGB(255, 100, 100)
+            return
+        end
+
+        -- Save the current height
+        floatHeight = root.Position.Y + 33
+
+        floatButton.Text = "FLOAT: ON"
+        floatButton.BackgroundColor3 = Color3.fromRGB(55, 170, 90)
+
+        status.Text = "Float enabled"
+        status.TextColor3 = Color3.fromRGB(80, 220, 120)
+
+        -- Remove old connection if there is one
+        if floatConnection then
+            floatConnection:Disconnect()
+            floatConnection = nil
+        end
+
+        floatConnection = RunService.Heartbeat:Connect(function()
+
+            if not floatEnabled then
+                return
+            end
+
+            local currentCharacter = player.Character
+
+            if not currentCharacter then
+                return
+            end
+
+            local currentRoot =
+                currentCharacter:FindFirstChild("HumanoidRootPart")
+
+            if not currentRoot then
+                return
+            end
+
+            -- Keep the character at the saved height
+            local position = currentRoot.Position
+
+            currentRoot.AssemblyLinearVelocity = Vector3.new(
+                currentRoot.AssemblyLinearVelocity.X,
+                0,
+                currentRoot.AssemblyLinearVelocity.Z
+            )
+
+            currentRoot.CFrame = CFrame.new(
+                position.X,
+                floatHeight,
+                position.Z
+            ) * (currentRoot.CFrame - currentRoot.CFrame.Position)
+
+        end)
+
+    else
+
+        if floatConnection then
+            floatConnection:Disconnect()
+            floatConnection = nil
+        end
+
+        floatHeight = nil
+
+        floatButton.Text = "FLOAT: OFF"
+        floatButton.BackgroundColor3 = Color3.fromRGB(90, 90, 100)
+
+        status.Text = "Float disabled"
+        status.TextColor3 = Color3.fromRGB(150, 150, 160)
+
+    end
+
 end)
 
 --==================================================
@@ -578,6 +725,6 @@ end)
 
 leave.MouseButton1Click:Connect(function()
 
-	player:Kick("You left the game.")
+    player:Kick("You left the game.")
 
 end)
