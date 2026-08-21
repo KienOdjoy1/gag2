@@ -18,13 +18,96 @@ gui.Parent = player:WaitForChild("PlayerGui")
 --==================================================
 
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 340, 0, 300)
-main.Position = UDim2.new(0.5, -170, 0.1, 0)
+
+-- COMPACT SIZE FOR PHONE
+main.Size = UDim2.new(0, 340, 0, 405)
+
+main.AnchorPoint = Vector2.new(0.5, 0)
+main.Position = UDim2.new(0.5, 0, 0.08, 0)
+
 main.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
 main.BorderSizePixel = 0
 main.Active = true
 main.Draggable = true
 main.Parent = gui
+
+--==================================================
+-- PHONE RESPONSIVE SCALING
+--==================================================
+
+local uiScale = Instance.new("UIScale")
+uiScale.Scale = 1
+uiScale.Parent = main
+
+local viewportConnection = nil
+
+local function updateUIScale()
+
+	local camera = workspace.CurrentCamera
+
+	if not camera then
+		return
+	end
+
+	local viewport = camera.ViewportSize
+
+	-- Keep 10px margin around the GUI
+	local availableWidth = math.max(viewport.X - 20, 200)
+	local availableHeight = math.max(viewport.Y - 20, 250)
+
+	local widthScale = availableWidth / 340
+	local heightScale = availableHeight / 405
+
+	local scale = math.min(widthScale, heightScale)
+
+	-- Don't become too tiny
+	scale = math.clamp(scale, 0.60, 1)
+
+	uiScale.Scale = scale
+
+	-- Center horizontally
+	main.Position = UDim2.new(
+		0.5,
+		0,
+		0,
+		math.max(5, viewport.Y * 0.05)
+	)
+end
+
+local function connectViewport()
+
+	if viewportConnection then
+		viewportConnection:Disconnect()
+		viewportConnection = nil
+	end
+
+	local camera = workspace.CurrentCamera
+
+	if not camera then
+		return
+	end
+
+	updateUIScale()
+
+	viewportConnection =
+		camera:GetPropertyChangedSignal("ViewportSize"):Connect(
+			updateUIScale
+		)
+end
+
+connectViewport()
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+
+	task.wait()
+
+	connectViewport()
+
+end)
+
+--==================================================
+-- FRAME STYLE
+--==================================================
 
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 16)
@@ -38,9 +121,17 @@ stroke.Parent = main
 
 local gradient = Instance.new("UIGradient")
 gradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(32, 30, 45)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(13, 13, 19))
+	ColorSequenceKeypoint.new(
+		0,
+		Color3.fromRGB(32, 30, 45)
+	),
+
+	ColorSequenceKeypoint.new(
+		1,
+		Color3.fromRGB(13, 13, 19)
+	)
 })
+
 gradient.Rotation = 90
 gradient.Parent = main
 
@@ -59,10 +150,19 @@ topCorner.CornerRadius = UDim.new(0, 16)
 topCorner.Parent = topBar
 
 local topGradient = Instance.new("UIGradient")
+
 topGradient.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(85, 55, 135)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 30, 55))
+	ColorSequenceKeypoint.new(
+		0,
+		Color3.fromRGB(85, 55, 135)
+	),
+
+	ColorSequenceKeypoint.new(
+		1,
+		Color3.fromRGB(35, 30, 55)
+	)
 })
+
 topGradient.Parent = topBar
 
 --==================================================
@@ -70,44 +170,66 @@ topGradient.Parent = topBar
 --==================================================
 
 local title = Instance.new("TextLabel")
+
 title.Size = UDim2.new(1, -70, 0, 30)
 title.Position = UDim2.new(0, 15, 0, 7)
 title.BackgroundTransparency = 1
+
 title.Text = "MACRO"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextSize = 20
 title.Font = Enum.Font.GothamBold
+
 title.TextXAlignment = Enum.TextXAlignment.Left
+
 title.Parent = topBar
 
 local subtitle = Instance.new("TextLabel")
+
 subtitle.Size = UDim2.new(1, -70, 0, 18)
 subtitle.Position = UDim2.new(0, 16, 0, 35)
+
 subtitle.BackgroundTransparency = 1
+
 subtitle.Text = "SAE BY KIEN"
-subtitle.TextColor3 = Color3.fromRGB(190, 180, 210)
+subtitle.TextColor3 =
+	Color3.fromRGB(190, 180, 210)
+
 subtitle.TextSize = 10
 subtitle.Font = Enum.Font.Gotham
-subtitle.TextXAlignment = Enum.TextXAlignment.Left
+
+subtitle.TextXAlignment =
+	Enum.TextXAlignment.Left
+
 subtitle.Parent = topBar
 
 --==================================================
--- MINIMIZE
+-- MINIMIZE BUTTON
 --==================================================
 
 local minimize = Instance.new("TextButton")
+
 minimize.Size = UDim2.new(0, 40, 0, 34)
 minimize.Position = UDim2.new(1, -50, 0, 14)
-minimize.BackgroundColor3 = Color3.fromRGB(60, 55, 75)
+
+minimize.BackgroundColor3 =
+	Color3.fromRGB(60, 55, 75)
+
 minimize.BorderSizePixel = 0
+
 minimize.Text = "−"
-minimize.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimize.TextColor3 =
+	Color3.fromRGB(255, 255, 255)
+
 minimize.TextSize = 22
 minimize.Font = Enum.Font.GothamBold
+
 minimize.Parent = topBar
 
 local minimizeCorner = Instance.new("UICorner")
-minimizeCorner.CornerRadius = UDim.new(0, 9)
+minimizeCorner.CornerRadius =
+	UDim.new(0, 9)
+
 minimizeCorner.Parent = minimize
 
 --==================================================
@@ -115,126 +237,189 @@ minimizeCorner.Parent = minimize
 --==================================================
 
 local status = Instance.new("TextLabel")
+
 status.Size = UDim2.new(1, -30, 0, 25)
 status.Position = UDim2.new(0, 15, 0, 70)
+
 status.BackgroundTransparency = 1
+
 status.Text = "●  Ready"
-status.TextColor3 = Color3.fromRGB(150, 150, 165)
+
+status.TextColor3 =
+	Color3.fromRGB(150, 150, 165)
+
 status.TextSize = 11
 status.Font = Enum.Font.GothamMedium
-status.TextXAlignment = Enum.TextXAlignment.Left
+
+status.TextXAlignment =
+	Enum.TextXAlignment.Left
+
 status.Parent = main
 
 --==================================================
 -- BUTTON FUNCTION
 --==================================================
 
-local function createButton(text, x, y, width, height, color)
+local function createButton(
+	text,
+	x,
+	y,
+	width,
+	height,
+	color
+)
 
 	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(0, width, 0, height)
-	button.Position = UDim2.new(0, x, 0, y)
+
+	button.Size =
+		UDim2.new(0, width, 0, height)
+
+	button.Position =
+		UDim2.new(0, x, 0, y)
+
 	button.BackgroundColor3 = color
+
 	button.BorderSizePixel = 0
 	button.AutoButtonColor = false
+
 	button.Text = text
-	button.TextColor3 = Color3.new(1, 1, 1)
+	button.TextColor3 =
+		Color3.new(1, 1, 1)
+
 	button.TextSize = 12
 	button.Font = Enum.Font.GothamBold
+
 	button.Parent = main
 
-	local buttonCorner = Instance.new("UICorner")
-	buttonCorner.CornerRadius = UDim.new(0, 10)
+	local buttonCorner =
+		Instance.new("UICorner")
+
+	buttonCorner.CornerRadius =
+		UDim.new(0, 10)
+
 	buttonCorner.Parent = button
 
-	local buttonStroke = Instance.new("UIStroke")
-	buttonStroke.Color = Color3.fromRGB(255, 255, 255)
+	local buttonStroke =
+		Instance.new("UIStroke")
+
+	buttonStroke.Color =
+		Color3.fromRGB(255, 255, 255)
+
 	buttonStroke.Transparency = 0.9
 	buttonStroke.Thickness = 1
+
 	buttonStroke.Parent = button
 
 	button.MouseEnter:Connect(function()
 
-		button.BackgroundColor3 = Color3.fromRGB(
-			math.min(color.R * 255 + 15, 255),
-			math.min(color.G * 255 + 15, 255),
-			math.min(color.B * 255 + 15, 255)
-		)
+		button.BackgroundColor3 =
+			Color3.fromRGB(
+				math.min(color.R * 255 + 15, 255),
+				math.min(color.G * 255 + 15, 255),
+				math.min(color.B * 255 + 15, 255)
+			)
 
 	end)
 
 	button.MouseLeave:Connect(function()
+
 		button.BackgroundColor3 = color
+
 	end)
 
 	return button
+
 end
 
 --==================================================
 -- BUTTONS
 --==================================================
 
+local buttonColor =
+	Color3.fromRGB(65, 65, 80)
+
+local onColor =
+	Color3.fromRGB(55, 170, 90)
+
 local godMode = createButton(
 	"GOD MODE: OFF",
-	10, 105,
-	155, 42,
-	Color3.fromRGB(65, 65, 80)
+	10,
+	105,
+	155,
+	42,
+	buttonColor
 )
 
 local transparencyButton = createButton(
 	"TRANSPARENCY: OFF",
-	175, 105,
-	155, 42,
-	Color3.fromRGB(65, 65, 80)
+	175,
+	105,
+	155,
+	42,
+	buttonColor
 )
 
 local transparencyLevel = createButton(
 	"TRANSPARENCY 50%",
-	10, 155,
-	320, 42,
+	10,
+	155,
+	320,
+	42,
 	Color3.fromRGB(90, 65, 145)
 )
 
 local antiFallButton = createButton(
 	"ANTI-FALL: OFF",
-	10, 205,
-	155, 42,
-	Color3.fromRGB(65, 65, 80)
+	10,
+	205,
+	155,
+	42,
+	buttonColor
 )
 
 local noKnockbackButton = createButton(
 	"NO KNOCKBACK: OFF",
-	175, 205,
-	155, 42,
-	Color3.fromRGB(65, 65, 80)
+	175,
+	205,
+	155,
+	42,
+	buttonColor
 )
 
 local lowGraphicsButton = createButton(
 	"LOW GRAPHICS: OFF",
-	10, 255,
-	155, 42,
-	Color3.fromRGB(65, 65, 80)
+	10,
+	255,
+	155,
+	42,
+	buttonColor
 )
 
 local removeEffectsButton = createButton(
 	"EFFECTS: OFF",
-	175, 255,
-	155, 42,
-	Color3.fromRGB(65, 65, 80)
+	175,
+	255,
+	155,
+	42,
+	buttonColor
 )
 
 local hidePartsButton = createButton(
 	"HIDE PARTS: OFF",
-	10, 305,
-	320, 42,
-	Color3.fromRGB(65, 65, 80)
+	10,
+	305,
+	320,
+	42,
+	buttonColor
 )
 
 local ragdollButton = createButton(
 	"RAGDOLL: OFF",
-	10, 355,
-	320, 42,
-	Color3.fromRGB(65, 65, 80)
+	10,
+	355,
+	320,
+	42,
+	buttonColor
 )
 
 --==================================================
@@ -271,7 +456,9 @@ local ragdollConnection = nil
 --==================================================
 
 local function getCharacter()
+
 	return player.Character
+
 end
 
 local function getHumanoid()
@@ -282,7 +469,9 @@ local function getHumanoid()
 		return nil
 	end
 
-	return character:FindFirstChildOfClass("Humanoid")
+	return character:
+		FindFirstChildOfClass("Humanoid")
+
 end
 
 local function getRoot()
@@ -293,7 +482,9 @@ local function getRoot()
 		return nil
 	end
 
-	return character:FindFirstChild("HumanoidRootPart")
+	return character:
+		FindFirstChild("HumanoidRootPart")
+
 end
 
 --==================================================
@@ -308,76 +499,114 @@ local function enableGodMode()
 		return false
 	end
 
-	humanoid.Health = humanoid.MaxHealth
+	humanoid.Health =
+		humanoid.MaxHealth
 
 	if godConnection then
 		godConnection:Disconnect()
 	end
 
-	godConnection = humanoid.HealthChanged:Connect(function()
+	godConnection =
+		humanoid.HealthChanged:Connect(
+			function()
 
-		if godModeEnabled and humanoid.Parent then
+				if godModeEnabled
+					and humanoid.Parent then
 
-			if humanoid.Health < humanoid.MaxHealth then
-				humanoid.Health = humanoid.MaxHealth
+					if humanoid.Health <
+						humanoid.MaxHealth then
+
+						humanoid.Health =
+							humanoid.MaxHealth
+
+					end
+
+				end
+
 			end
-
-		end
-
-	end)
+		)
 
 	return true
+
 end
 
 local function disableGodMode()
 
 	if godConnection then
+
 		godConnection:Disconnect()
 		godConnection = nil
+
 	end
 
 end
 
-godMode.MouseButton1Click:Connect(function()
+godMode.MouseButton1Click:Connect(
+	function()
 
-	godModeEnabled = not godModeEnabled
+		godModeEnabled =
+			not godModeEnabled
 
-	if godModeEnabled then
+		if godModeEnabled then
 
-		if not enableGodMode() then
+			if not enableGodMode() then
 
-			godModeEnabled = false
+				godModeEnabled = false
 
-			status.Text = "●  Character not found!"
+				status.Text =
+					"● Character not found!"
+
+				status.TextColor3 =
+					Color3.fromRGB(
+						255,
+						100,
+						100
+					)
+
+				return
+
+			end
+
+			godMode.Text =
+				"GOD MODE: ON"
+
+			godMode.BackgroundColor3 =
+				onColor
+
+			status.Text =
+				"● God Mode enabled"
+
 			status.TextColor3 =
-				Color3.fromRGB(255, 100, 100)
+				Color3.fromRGB(
+					80,
+					220,
+					120
+				)
 
-			return
+		else
+
+			disableGodMode()
+
+			godMode.Text =
+				"GOD MODE: OFF"
+
+			godMode.BackgroundColor3 =
+				buttonColor
+
+			status.Text =
+				"● God Mode disabled"
+
+			status.TextColor3 =
+				Color3.fromRGB(
+					150,
+					150,
+					160
+				)
+
 		end
 
-		godMode.Text = "GOD MODE: ON"
-		godMode.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
-
-		status.Text = "●  God Mode enabled"
-		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
-
-	else
-
-		disableGodMode()
-
-		godMode.Text = "GOD MODE: OFF"
-		godMode.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
-
-		status.Text = "●  God Mode disabled"
-		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
-
 	end
-
-end)
+)
 
 --==================================================
 -- TRANSPARENCY
@@ -386,7 +615,10 @@ end)
 local function saveTransparency(object)
 
 	if originalTransparency[object] == nil then
-		originalTransparency[object] = object.Transparency
+
+		originalTransparency[object] =
+			object.Transparency
+
 	end
 
 end
@@ -399,25 +631,31 @@ local function setAvatarTransparency(value)
 		return
 	end
 
-	for _, object in ipairs(character:GetDescendants()) do
+	for _, object in
+		ipairs(character:GetDescendants()) do
 
 		if object:IsA("BasePart") then
 
-			if object.Name == "HumanoidRootPart" then
+			if object.Name ==
+				"HumanoidRootPart" then
 
 				object.Transparency = 1
 
 			else
 
 				saveTransparency(object)
-				object.Transparency = value
+
+				object.Transparency =
+					value
 
 			end
 
 		elseif object:IsA("Decal") then
 
 			saveTransparency(object)
-			object.Transparency = value
+
+			object.Transparency =
+				value
 
 		end
 
@@ -427,95 +665,123 @@ end
 
 local function restoreAvatarTransparency()
 
-	for object, value in pairs(originalTransparency) do
+	for object, value in
+		pairs(originalTransparency) do
 
 		if object and object.Parent then
-			object.Transparency = value
+
+			object.Transparency =
+				value
+
 		end
 
 	end
 
 end
 
-transparencyButton.MouseButton1Click:Connect(function()
+transparencyButton.MouseButton1Click:Connect(
+	function()
 
-	transparencyEnabled = not transparencyEnabled
+		transparencyEnabled =
+			not transparencyEnabled
 
-	if transparencyEnabled then
+		if transparencyEnabled then
 
-		setAvatarTransparency(transparencyValue)
+			setAvatarTransparency(
+				transparencyValue
+			)
 
-		transparencyButton.Text =
-			"TRANSPARENCY: ON"
+			transparencyButton.Text =
+				"TRANSPARENCY: ON"
 
-		transparencyButton.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
+			transparencyButton.BackgroundColor3 =
+				onColor
 
-		status.Text =
-			"●  Transparency enabled"
+			status.Text =
+				"● Transparency enabled"
 
-		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
+			status.TextColor3 =
+				Color3.fromRGB(
+					80,
+					220,
+					120
+				)
 
-	else
+		else
 
-		restoreAvatarTransparency()
+			restoreAvatarTransparency()
 
-		transparencyButton.Text =
-			"TRANSPARENCY: OFF"
+			transparencyButton.Text =
+				"TRANSPARENCY: OFF"
 
-		transparencyButton.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
+			transparencyButton.BackgroundColor3 =
+				buttonColor
 
-		status.Text =
-			"●  Transparency disabled"
+			status.Text =
+				"● Transparency disabled"
 
-		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
+			status.TextColor3 =
+				Color3.fromRGB(
+					150,
+					150,
+					160
+				)
+
+		end
 
 	end
-
-end)
+)
 
 --==================================================
 -- TRANSPARENCY LEVEL
 --==================================================
 
-transparencyLevel.MouseButton1Click:Connect(function()
+transparencyLevel.MouseButton1Click:Connect(
+	function()
 
-	if transparencyValue == 0.5 then
+		if transparencyValue == 0.5 then
 
-		transparencyValue = 0.75
-		transparencyLevel.Text =
-			"TRANSPARENCY 75%"
+			transparencyValue = 0.75
 
-	elseif transparencyValue == 0.75 then
+			transparencyLevel.Text =
+				"TRANSPARENCY 75%"
 
-		transparencyValue = 0.25
-		transparencyLevel.Text =
-			"TRANSPARENCY 25%"
+		elseif transparencyValue == 0.75 then
 
-	else
+			transparencyValue = 0.25
 
-		transparencyValue = 0.5
-		transparencyLevel.Text =
-			"TRANSPARENCY 50%"
+			transparencyLevel.Text =
+				"TRANSPARENCY 25%"
+
+		else
+
+			transparencyValue = 0.5
+
+			transparencyLevel.Text =
+				"TRANSPARENCY 50%"
+
+		end
+
+		if transparencyEnabled then
+
+			setAvatarTransparency(
+				transparencyValue
+			)
+
+		end
+
+		status.Text =
+			"● Transparency: "
+			.. math.floor(
+				transparencyValue * 100
+			)
+			.. "%"
 
 	end
-
-	if transparencyEnabled then
-		setAvatarTransparency(transparencyValue)
-	end
-
-	status.Text =
-		"●  Transparency: "
-		.. math.floor(transparencyValue * 100)
-		.. "%"
-
-end)
+)
 
 --==================================================
--- ANTI-FALL
+-- ANTI FALL
 --==================================================
 
 local function setAntiFall(enabled)
@@ -524,15 +790,15 @@ local function setAntiFall(enabled)
 
 	local humanoid = getHumanoid()
 
-	if not humanoid then
-		return
-	end
-
 	if antiFallConnection then
 
 		antiFallConnection:Disconnect()
 		antiFallConnection = nil
 
+	end
+
+	if not humanoid then
+		return
 	end
 
 	if enabled then
@@ -548,42 +814,49 @@ local function setAntiFall(enabled)
 		)
 
 		antiFallConnection =
-			RunService.Heartbeat:Connect(function()
+			RunService.Heartbeat:Connect(
+				function()
 
-				if not antiFallEnabled then
-					return
+					if not antiFallEnabled then
+						return
+					end
+
+					if not humanoid.Parent then
+						return
+					end
+
+					local state =
+						humanoid:GetState()
+
+					if state ==
+						Enum.HumanoidStateType.FallingDown
+						or state ==
+						Enum.HumanoidStateType.Ragdoll then
+
+						humanoid:ChangeState(
+							Enum.HumanoidStateType.GettingUp
+						)
+
+					end
+
 				end
-
-				if not humanoid.Parent then
-					return
-				end
-
-				local state = humanoid:GetState()
-
-				if state ==
-					Enum.HumanoidStateType.FallingDown
-					or state ==
-					Enum.HumanoidStateType.Ragdoll then
-
-					humanoid:ChangeState(
-						Enum.HumanoidStateType.GettingUp
-					)
-
-				end
-
-			end)
+			)
 
 		antiFallButton.Text =
 			"ANTI-FALL: ON"
 
 		antiFallButton.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
+			onColor
 
 		status.Text =
-			"●  Anti-Fall enabled"
+			"● Anti-Fall enabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
+			Color3.fromRGB(
+				80,
+				220,
+				120
+			)
 
 	else
 
@@ -601,23 +874,31 @@ local function setAntiFall(enabled)
 			"ANTI-FALL: OFF"
 
 		antiFallButton.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
+			buttonColor
 
 		status.Text =
-			"●  Anti-Fall disabled"
+			"● Anti-Fall disabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
+			Color3.fromRGB(
+				150,
+				150,
+				160
+			)
 
 	end
 
 end
 
-antiFallButton.MouseButton1Click:Connect(function()
+antiFallButton.MouseButton1Click:Connect(
+	function()
 
-	setAntiFall(not antiFallEnabled)
+		setAntiFall(
+			not antiFallEnabled
+		)
 
-end)
+	end
+)
 
 --==================================================
 -- NO KNOCKBACK
@@ -642,120 +923,69 @@ local function setNoKnockback(enabled)
 		local lastNormalTime = 0
 
 		noKnockbackConnection =
-			RunService.Heartbeat:Connect(function()
+			RunService.Heartbeat:Connect(
+				function()
 
-				if not noKnockbackEnabled then
-					return
-				end
+					if not noKnockbackEnabled then
+						return
+					end
 
-				local character = getCharacter()
-				local humanoid = getHumanoid()
-				local root = getRoot()
+					local character =
+						getCharacter()
 
-				if not character
-					or not humanoid
-					or not root then
+					local humanoid =
+						getHumanoid()
 
-					return
-				end
+					local root =
+						getRoot()
 
-				local velocity =
-					root.AssemblyLinearVelocity
+					if not character
+						or not humanoid
+						or not root then
 
-				local horizontalVelocity =
-					Vector3.new(
-						velocity.X,
-						0,
-						velocity.Z
-					)
-
-				local horizontalSpeed =
-					horizontalVelocity.Magnitude
-
-				--==========================================
-				-- KNOCKBACK SETTINGS
-				--==========================================
-
-				local knockbackLimit =
-					math.max(
-						humanoid.WalkSpeed * 1.5,
-						25
-					)
-
-				--==========================================
-				-- SAVE STABLE POSITION
-				--==========================================
-
-				if horizontalSpeed <= knockbackLimit then
-
-					lastStablePosition =
-						root.Position
-
-					lastStableCFrame =
-						root.CFrame
-
-					lastNormalTime =
-						os.clock()
-
-				end
-
-				--==========================================
-				-- DETECT STRONG KNOCKBACK
-				--==========================================
-
-				if horizontalSpeed >
-					knockbackLimit then
-
-					-- Stop horizontal launch.
-
-					root.AssemblyLinearVelocity =
-						Vector3.zero
-
-					root.AssemblyAngularVelocity =
-						Vector3.zero
-
-					-- Return to the last stable position.
-
-					if lastStableCFrame then
-
-						root.CFrame =
-							lastStableCFrame
-
-					elseif lastStablePosition then
-
-						root.CFrame =
-							CFrame.new(
-								lastStablePosition
-							)
+						return
 
 					end
 
-					return
+					local velocity =
+						root.AssemblyLinearVelocity
 
-				end
+					local horizontalVelocity =
+						Vector3.new(
+							velocity.X,
+							0,
+							velocity.Z
+						)
 
-				--==========================================
-				-- DETECT LARGE POSITION JUMP
-				--==========================================
+					local horizontalSpeed =
+						horizontalVelocity.Magnitude
 
-				if lastStablePosition then
+					local knockbackLimit =
+						math.max(
+							humanoid.WalkSpeed * 1.5,
+							25
+						)
 
-					local distance =
-						(
+					-- SAVE STABLE POSITION
+
+					if horizontalSpeed <=
+						knockbackLimit then
+
+						lastStablePosition =
 							root.Position
-							- lastStablePosition
-						).Magnitude
 
-					local recentlyStable =
-						os.clock() - lastNormalTime < 0.8
+						lastStableCFrame =
+							root.CFrame
 
-					if distance > 12
-						and recentlyStable then
+						lastNormalTime =
+							os.clock()
 
-						root.CFrame =
-							CFrame.new(
-								lastStablePosition
-							)
+					end
+
+					-- DETECT KNOCKBACK
+
+					if horizontalSpeed >
+						knockbackLimit then
 
 						root.AssemblyLinearVelocity =
 							Vector3.zero
@@ -763,23 +993,75 @@ local function setNoKnockback(enabled)
 						root.AssemblyAngularVelocity =
 							Vector3.zero
 
+						if lastStableCFrame then
+
+							root.CFrame =
+								lastStableCFrame
+
+						elseif lastStablePosition then
+
+							root.CFrame =
+								CFrame.new(
+									lastStablePosition
+								)
+
+						end
+
+						return
+
+					end
+
+					-- DETECT LARGE POSITION JUMP
+
+					if lastStablePosition then
+
+						local distance =
+							(
+								root.Position
+								- lastStablePosition
+							).Magnitude
+
+						local recentlyStable =
+							os.clock()
+							- lastNormalTime
+							< 0.8
+
+						if distance > 12
+							and recentlyStable then
+
+							root.CFrame =
+								CFrame.new(
+									lastStablePosition
+								)
+
+							root.AssemblyLinearVelocity =
+								Vector3.zero
+
+							root.AssemblyAngularVelocity =
+								Vector3.zero
+
+						end
+
 					end
 
 				end
-
-			end)
+			)
 
 		noKnockbackButton.Text =
 			"NO KNOCKBACK: ON"
 
 		noKnockbackButton.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
+			onColor
 
 		status.Text =
-			"●  No Knockback enabled"
+			"● No Knockback enabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
+			Color3.fromRGB(
+				80,
+				220,
+				120
+			)
 
 	else
 
@@ -787,23 +1069,31 @@ local function setNoKnockback(enabled)
 			"NO KNOCKBACK: OFF"
 
 		noKnockbackButton.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
+			buttonColor
 
 		status.Text =
-			"●  No Knockback disabled"
+			"● No Knockback disabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
+			Color3.fromRGB(
+				150,
+				150,
+				160
+			)
 
 	end
 
 end
 
-noKnockbackButton.MouseButton1Click:Connect(function()
+noKnockbackButton.MouseButton1Click:Connect(
+	function()
 
-	setNoKnockback(not noKnockbackEnabled)
+		setNoKnockback(
+			not noKnockbackEnabled
+		)
 
-end)
+	end
+)
 
 --==================================================
 -- LOW GRAPHICS
@@ -818,23 +1108,27 @@ local function setLowGraphics(enabled)
 		Lighting.GlobalShadows = false
 		Lighting.Brightness = 1
 
-		for _, object in ipairs(
-			Lighting:GetChildren()
-		) do
+		for _, object in
+			ipairs(Lighting:GetChildren()) do
 
 			if object:IsA("PostEffect") then
+
 				object.Enabled = false
+
 			end
 
 		end
 
 		local terrain =
-			workspace:FindFirstChildOfClass("Terrain")
+			workspace:
+			FindFirstChildOfClass("Terrain")
 
 		if terrain then
 
 			pcall(function()
+
 				terrain.Decoration = false
+
 			end)
 
 		end
@@ -843,13 +1137,17 @@ local function setLowGraphics(enabled)
 			"LOW GRAPHICS: ON"
 
 		lowGraphicsButton.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
+			onColor
 
 		status.Text =
-			"●  Low graphics enabled"
+			"● Low graphics enabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
+			Color3.fromRGB(
+				80,
+				220,
+				120
+			)
 
 	else
 
@@ -857,29 +1155,34 @@ local function setLowGraphics(enabled)
 			"LOW GRAPHICS: OFF"
 
 		lowGraphicsButton.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
+			buttonColor
 
 		status.Text =
-			"●  Low graphics disabled"
+			"● Low graphics disabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
+			Color3.fromRGB(
+				150,
+				150,
+				160
+			)
 
 	end
 
 end
 
-lowGraphicsButton.MouseButton1Click:Connect(function()
+lowGraphicsButton.MouseButton1Click:Connect(
+	function()
 
-	setLowGraphics(not lowGraphicsEnabled)
+		setLowGraphics(
+			not lowGraphicsEnabled
+		)
 
-end)
+	end
+)
 
 --==================================================
 -- EFFECTS
--- FIXED:
--- ON = ENABLE
--- OFF = DISABLE
 --==================================================
 
 local function isVisualEffect(object)
@@ -909,30 +1212,31 @@ local function setEffectsRemoved(enabled)
 
 	effectsRemoved = enabled
 
-	for _, object in ipairs(
-		game:GetDescendants()
-	) do
+	for _, object in
+		ipairs(game:GetDescendants()) do
 
 		if isVisualEffect(object) then
 
 			if enabled then
 
-				-- OFF = disable effect
-
 				saveEffectState(object)
+
 				object.Enabled = false
 
 			else
-
-				-- ON = restore effect
 
 				local oldState =
 					savedEffects[object]
 
 				if oldState ~= nil then
-					object.Enabled = oldState
+
+					object.Enabled =
+						oldState
+
 				else
+
 					object.Enabled = true
+
 				end
 
 			end
@@ -947,13 +1251,17 @@ local function setEffectsRemoved(enabled)
 			"EFFECTS: ON"
 
 		removeEffectsButton.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
+			onColor
 
 		status.Text =
-			"●  Effects disabled"
+			"● Effects disabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
+			Color3.fromRGB(
+				80,
+				220,
+				120
+			)
 
 	else
 
@@ -961,44 +1269,52 @@ local function setEffectsRemoved(enabled)
 			"EFFECTS: OFF"
 
 		removeEffectsButton.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
+			buttonColor
 
 		status.Text =
-			"●  Effects enabled"
+			"● Effects enabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
+			Color3.fromRGB(
+				150,
+				150,
+				160
+			)
 
 	end
 
 end
 
-removeEffectsButton.MouseButton1Click:Connect(function()
+removeEffectsButton.MouseButton1Click:Connect(
+	function()
 
-	setEffectsRemoved(not effectsRemoved)
-
-end)
-
---==================================================
--- KEEP NEW EFFECTS DISABLED
---==================================================
-
-game.DescendantAdded:Connect(function(object)
-
-	if effectsRemoved
-		and isVisualEffect(object) then
-
-		task.defer(function()
-
-			if object and object.Parent then
-				object.Enabled = false
-			end
-
-		end)
+		setEffectsRemoved(
+			not effectsRemoved
+		)
 
 	end
+)
 
-end)
+game.DescendantAdded:Connect(
+	function(object)
+
+		if effectsRemoved
+			and isVisualEffect(object) then
+
+			task.defer(function()
+
+				if object and object.Parent then
+
+					object.Enabled = false
+
+				end
+
+			end)
+
+		end
+
+	end
+)
 
 --==================================================
 -- HIDE PARTS
@@ -1010,9 +1326,8 @@ local function hideAllParts(enabled)
 
 	if enabled then
 
-		for _, object in ipairs(
-			workspace:GetDescendants()
-		) do
+		for _, object in
+			ipairs(workspace:GetDescendants()) do
 
 			if object:IsA("BasePart") then
 
@@ -1060,19 +1375,22 @@ local function hideAllParts(enabled)
 			"HIDE PARTS: ON"
 
 		hidePartsButton.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
+			onColor
 
 		status.Text =
-			"●  Map parts hidden"
+			"● Map parts hidden"
 
 		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
+			Color3.fromRGB(
+				80,
+				220,
+				120
+			)
 
 	else
 
-		for object, value in pairs(
-			hiddenParts
-		) do
+		for object, value in
+			pairs(hiddenParts) do
 
 			if object and object.Parent then
 
@@ -1083,14 +1401,12 @@ local function hideAllParts(enabled)
 
 		end
 
-		for object, value in pairs(
-			hiddenDecals
-		) do
+		for object, value in
+			pairs(hiddenDecals) do
 
 			if object and object.Parent then
 
-				object.Transparency =
-					value
+				object.Transparency = value
 
 			end
 
@@ -1103,23 +1419,31 @@ local function hideAllParts(enabled)
 			"HIDE PARTS: OFF"
 
 		hidePartsButton.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
+			buttonColor
 
 		status.Text =
-			"●  Map parts restored"
+			"● Map parts restored"
 
 		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
+			Color3.fromRGB(
+				150,
+				150,
+				160
+			)
 
 	end
 
 end
 
-hidePartsButton.MouseButton1Click:Connect(function()
+hidePartsButton.MouseButton1Click:Connect(
+	function()
 
-	hideAllParts(not partsHidden)
+		hideAllParts(
+			not partsHidden
+		)
 
-end)
+	end
+)
 
 --==================================================
 -- RAGDOLL
@@ -1135,32 +1459,34 @@ local function maintainRagdoll()
 	end
 
 	ragdollConnection =
-		RunService.Heartbeat:Connect(function()
+		RunService.Heartbeat:Connect(
+			function()
 
-			if not ragdollEnabled then
-				return
+				if not ragdollEnabled then
+					return
+				end
+
+				local humanoid =
+					getHumanoid()
+
+				if not humanoid then
+					return
+				end
+
+				if humanoid:GetState()
+					~= Enum.HumanoidStateType.Physics then
+
+					humanoid:ChangeState(
+						Enum.HumanoidStateType.Physics
+					)
+
+				end
+
+				humanoid.AutoRotate = false
+				humanoid.PlatformStand = true
+
 			end
-
-			local humanoid =
-				getHumanoid()
-
-			if not humanoid then
-				return
-			end
-
-			if humanoid:GetState()
-				~= Enum.HumanoidStateType.Physics then
-
-				humanoid:ChangeState(
-					Enum.HumanoidStateType.Physics
-				)
-
-			end
-
-			humanoid.AutoRotate = false
-			humanoid.PlatformStand = true
-
-		end)
+		)
 
 end
 
@@ -1199,12 +1525,17 @@ local function setRagdoll(enabled)
 	if not humanoid then
 
 		status.Text =
-			"●  Character not found!"
+			"● Character not found!"
 
 		status.TextColor3 =
-			Color3.fromRGB(255, 100, 100)
+			Color3.fromRGB(
+				255,
+				100,
+				100
+			)
 
 		return
+
 	end
 
 	if enabled then
@@ -1222,13 +1553,17 @@ local function setRagdoll(enabled)
 			"RAGDOLL: ON"
 
 		ragdollButton.BackgroundColor3 =
-			Color3.fromRGB(55, 170, 90)
+			onColor
 
 		status.Text =
-			"●  Ragdoll enabled"
+			"● Ragdoll enabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(80, 220, 120)
+			Color3.fromRGB(
+				80,
+				220,
+				120
+			)
 
 	else
 
@@ -1238,23 +1573,31 @@ local function setRagdoll(enabled)
 			"RAGDOLL: OFF"
 
 		ragdollButton.BackgroundColor3 =
-			Color3.fromRGB(65, 65, 80)
+			buttonColor
 
 		status.Text =
-			"●  Ragdoll disabled"
+			"● Ragdoll disabled"
 
 		status.TextColor3 =
-			Color3.fromRGB(150, 150, 160)
+			Color3.fromRGB(
+				150,
+				150,
+				160
+			)
 
 	end
 
 end
 
-ragdollButton.MouseButton1Click:Connect(function()
+ragdollButton.MouseButton1Click:Connect(
+	function()
 
-	setRagdoll(not ragdollEnabled)
+		setRagdoll(
+			not ragdollEnabled
+		)
 
-end)
+	end
+)
 
 --==================================================
 -- MINIMIZE
@@ -1262,159 +1605,229 @@ end)
 
 local minimized = false
 
-minimize.MouseButton1Click:Connect(function()
+minimize.MouseButton1Click:Connect(
+	function()
 
-	minimized = not minimized
+		minimized = not minimized
 
-	if minimized then
+		if minimized then
 
-		for _, object in ipairs(
-			main:GetChildren()
-		) do
+			for _, object in
+				ipairs(main:GetChildren()) do
 
-			if object ~= corner
-				and object ~= stroke
-				and object ~= gradient
-				and object ~= topBar then
+				if object ~= corner
+					and object ~= stroke
+					and object ~= gradient
+					and object ~= topBar then
 
-				if object:IsA("GuiObject") then
-					object.Visible = false
+					if object:IsA("GuiObject") then
+
+						object.Visible = false
+
+					end
+
 				end
 
 			end
 
-		end
+			main.Size =
+				UDim2.new(
+					0,
+					58,
+					0,
+					50
+				)
 
-		main.Size =
-			UDim2.new(0, 58, 0, 50)
+			topBar.Size =
+				UDim2.new(
+					1,
+					0,
+					1,
+					0
+				)
 
-		topBar.Size =
-			UDim2.new(1, 0, 1, 0)
+			title.Visible = false
+			subtitle.Visible = false
 
-		title.Visible = false
-		subtitle.Visible = false
+			minimize.Size =
+				UDim2.new(
+					0,
+					42,
+					0,
+					38
+				)
 
-		minimize.Size =
-			UDim2.new(0, 42, 0, 38)
+			minimize.Position =
+				UDim2.new(
+					0,
+					8,
+					0,
+					6
+				)
 
-		minimize.Position =
-			UDim2.new(0, 8, 0, 6)
+			minimize.Text = "+"
 
-		minimize.Text = "+"
+		else
 
-	else
+			main.Size =
+				UDim2.new(
+					0,
+					340,
+					0,
+					405
+				)
 
-		main.Size =
-			UDim2.new(0, 340, 0, 545)
+			topBar.Size =
+				UDim2.new(
+					1,
+					0,
+					0,
+					62
+				)
 
-		topBar.Size =
-			UDim2.new(1, 0, 0, 62)
+			title.Visible = true
+			subtitle.Visible = true
 
-		title.Visible = true
-		subtitle.Visible = true
+			for _, object in
+				ipairs(main:GetChildren()) do
 
-		for _, object in ipairs(
-			main:GetChildren()
-		) do
+				if object:IsA("GuiObject") then
 
-			if object:IsA("GuiObject") then
-				object.Visible = true
+					object.Visible = true
+
+				end
+
 			end
 
+			minimize.Size =
+				UDim2.new(
+					0,
+					40,
+					0,
+					34
+				)
+
+			minimize.Position =
+				UDim2.new(
+					1,
+					-50,
+					0,
+					14
+				)
+
+			minimize.Text = "−"
+
 		end
 
-		minimize.Size =
-			UDim2.new(0, 40, 0, 34)
-
-		minimize.Position =
-			UDim2.new(1, -50, 0, 14)
-
-		minimize.Text = "−"
+		-- Recalculate phone scale
+		updateUIScale()
 
 	end
-
-end)
+)
 
 --==================================================
 -- CHARACTER RESPAWN
 --==================================================
 
-player.CharacterAdded:Connect(function(character)
+player.CharacterAdded:Connect(
+	function(character)
 
-	task.wait(1)
+		task.wait(1)
 
-	if godModeEnabled then
-		enableGodMode()
+		if godModeEnabled then
+			enableGodMode()
+		end
+
+		if transparencyEnabled then
+
+			setAvatarTransparency(
+				transparencyValue
+			)
+
+		end
+
+		if antiFallEnabled then
+
+			setAntiFall(true)
+
+		end
+
+		if noKnockbackEnabled then
+
+			setNoKnockback(true)
+
+		end
+
+		if lowGraphicsEnabled then
+
+			setLowGraphics(true)
+
+		end
+
+		if effectsRemoved then
+
+			setEffectsRemoved(true)
+
+		end
+
+		if partsHidden then
+
+			hideAllParts(true)
+
+		end
+
+		if ragdollEnabled then
+
+			task.wait(0.2)
+
+			setRagdoll(true)
+
+		end
+
 	end
-
-	if transparencyEnabled then
-		setAvatarTransparency(
-			transparencyValue
-		)
-	end
-
-	if antiFallEnabled then
-		setAntiFall(true)
-	end
-
-	if noKnockbackEnabled then
-		setNoKnockback(true)
-	end
-
-	if lowGraphicsEnabled then
-		setLowGraphics(true)
-	end
-
-	if effectsRemoved then
-		setEffectsRemoved(true)
-	end
-
-	if partsHidden then
-		hideAllParts(true)
-	end
-
-	if ragdollEnabled then
-
-		task.wait(0.2)
-
-		setRagdoll(true)
-
-	end
-
-end)
+)
 
 --==================================================
 -- CLEANUP
 --==================================================
 
-script.Destroying:Connect(function()
+script.Destroying:Connect(
+	function()
 
-	if godConnection then
+		if godConnection then
 
-		godConnection:Disconnect()
-		godConnection = nil
+			godConnection:Disconnect()
+			godConnection = nil
+
+		end
+
+		if antiFallConnection then
+
+			antiFallConnection:Disconnect()
+			antiFallConnection = nil
+
+		end
+
+		if noKnockbackConnection then
+
+			noKnockbackConnection:Disconnect()
+			noKnockbackConnection = nil
+
+		end
+
+		if ragdollConnection then
+
+			ragdollConnection:Disconnect()
+			ragdollConnection = nil
+
+		end
+
+		if viewportConnection then
+
+			viewportConnection:Disconnect()
+			viewportConnection = nil
+
+		end
 
 	end
-
-	if antiFallConnection then
-
-		antiFallConnection:Disconnect()
-		antiFallConnection = nil
-
-	end
-
-	if noKnockbackConnection then
-
-		noKnockbackConnection:Disconnect()
-		noKnockbackConnection = nil
-
-	end
-
-	if ragdollConnection then
-
-		ragdollConnection:Disconnect()
-		ragdollConnection = nil
-
-	end
-
-end)
+)
