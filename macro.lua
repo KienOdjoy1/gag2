@@ -1367,7 +1367,7 @@ showMainMenu = function()
     local gameFeatures =
         createButton(
             content,
-            "🎮  GAME FEATURES",
+            "🎮 FEATURES",
             0,
             37,
             310,
@@ -1378,7 +1378,7 @@ showMainMenu = function()
     local performance =
         createButton(
             content,
-            "⚡  GARDEN PERFORMANCE",
+            "⚡ PERFORMANCE",
             0,
             101,
             310,
@@ -1389,7 +1389,7 @@ showMainMenu = function()
     local teleport =
         createButton(
             content,
-            "📍  GARDEN LOCATIONS",
+            "📍 TELEPORTATION",
             0,
             165,
             310,
@@ -1436,7 +1436,7 @@ showGameFeatures = function()
     heading.BackgroundTransparency = 1
 
     heading.Text =
-        "🎮  GARDENER TOOLS"
+        "🎮 TOOLS"
 
     heading.TextColor3 =
         colors.text
@@ -1613,7 +1613,7 @@ showPerformance = function()
     heading.BackgroundTransparency = 1
 
     heading.Text =
-        "⚡  GARDEN PERFORMANCE"
+        "⚡ PERFORMANCE"
 
     heading.TextColor3 =
         colors.text
@@ -1847,7 +1847,7 @@ showTeleport = function()
     heading.BackgroundTransparency = 1
 
     heading.Text =
-        "📍  GARDEN LOCATIONS"
+        "📍 TELEPORTATION"
 
     heading.TextColor3 =
         colors.text
