@@ -1,10 +1,10 @@
 --// 🥚 ADVANCED SERVER HOP
---// Modern Egg-Style UI
---// Finds servers with 1-2 players
---// Rejects accounts younger than 30 days
---// Bacon / Noob avatar checker
---// Teleport failure DOES NOT automatically retry
---// SERVER HOP button becomes usable again after teleport failure
+--// Fixed Manual Retry Version
+--// Small Server Finder
+--// Account Age Checker
+--// Basic Bacon / Noob Avatar Checker
+--// Teleport failure NEVER starts another search
+--// Old script sessions are invalidated
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -13,28 +13,46 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
 --==================================================
 -- SETTINGS
 --==================================================
 
 local MIN_ACCOUNT_AGE = 30
-
 local MAX_PLAYERS = 2
-
 local MAX_PAGES = 10
 local MAX_RETRIES = 20
+local TELEPORT_TIMEOUT = 12
 
--- Avatar checking
-local ENABLE_AVATAR_CHECK = true
-local REJECT_BACON = true
-local REJECT_NOOB = true
+--==================================================
+-- GLOBAL CONTROLLER
+--==================================================
+-- Every time this script runs, the old controller
+-- becomes invalid.
+
+local controller = {}
+
+_G.AdvancedServerHopController = controller
+
+controller.alive = true
+controller.session = 0
+
+--==================================================
+-- INVALIDATE OLD CONTROLLER
+--==================================================
+
+local oldController = _G.AdvancedServerHopController
+
+-- The assignment above replaces the old controller.
+-- Old scripts check whether their controller is still
+-- the current controller before doing anything.
 
 --==================================================
 -- REMOVE OLD GUI
 --==================================================
 
-local oldGui = player:WaitForChild("PlayerGui"):FindFirstChild("AdvancedServerHop")
+local oldGui = PlayerGui:FindFirstChild("AdvancedServerHop")
 
 if oldGui then
 	oldGui:Destroy()
@@ -49,7 +67,7 @@ gui.Name = "AdvancedServerHop"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 999
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = PlayerGui
 
 --==================================================
 -- MAIN WINDOW
@@ -262,7 +280,7 @@ progressFillCorner.CornerRadius = UDim.new(1, 0)
 progressFillCorner.Parent = progress
 
 --==================================================
--- BOTTOM BUTTONS
+-- LEAVE BUTTON
 --==================================================
 
 local leave = Instance.new("TextButton")
@@ -279,6 +297,10 @@ leave.Parent = main
 local leaveCorner = Instance.new("UICorner")
 leaveCorner.CornerRadius = UDim.new(0, 10)
 leaveCorner.Parent = leave
+
+--==================================================
+-- SERVER HOP BUTTON
+--==================================================
 
 local hop = Instance.new("TextButton")
 hop.Size = UDim2.new(0, 224, 0, 45)
@@ -319,10 +341,73 @@ openStroke.Thickness = 2
 openStroke.Parent = open
 
 --==================================================
+-- STATE
+--==================================================
+
+local hopping = false
+local teleporting = false
+
+--==================================================
+-- SESSION CHECK
+--==================================================
+
+local function isCurrentController()
+	return _G.AdvancedServerHopController == controller
+		and controller.alive == true
+end
+
+local function newSession()
+	controller.session += 1
+	return controller.session
+end
+
+local function isCurrentSession(sessionId)
+	return isCurrentController()
+		and controller.session == sessionId
+end
+
+--==================================================
+-- RESET
+--==================================================
+
+local function resetHopButton(message, sessionId)
+	if sessionId and not isCurrentSession(sessionId) then
+		return
+	end
+
+	-- Invalidate the current search.
+	newSession()
+
+	hopping = false
+	teleporting = false
+
+	hop.Active = true
+	leave.Active = true
+
+	hop.Text = "🔄  SERVER HOP"
+
+	accountStatus.Text = "READY"
+	accountStatus.TextColor3 = Color3.fromRGB(100, 255, 130)
+
+	progress.Size = UDim2.new(0, 0, 1, 0)
+
+	if message then
+		status.Text = "● " .. message
+	else
+		status.Text = "● Ready"
+	end
+end
+
+--==================================================
 -- LEAVE
 --==================================================
 
 leave.MouseButton1Click:Connect(function()
+	if hopping then
+		return
+	end
+
+	controller.alive = false
 	player:Kick("You left the game.")
 end)
 
@@ -341,7 +426,7 @@ open.MouseButton1Click:Connect(function()
 end)
 
 --==================================================
--- ACCOUNT CHECK
+-- ACCOUNT AGE CHECK
 --==================================================
 
 local function hasNewAccount()
@@ -357,157 +442,78 @@ local function hasNewAccount()
 end
 
 --==================================================
--- AVATAR HELPERS
+-- BASIC BACON / NOOB CHECK
 --==================================================
+-- This is only a heuristic.
+-- It checks for a very basic/default-looking avatar.
+--
+-- It does NOT guarantee that the player is actually
+-- a bacon/noob.
 
-local function getBodyColor(character, bodyPartName)
-	local bodyColors = character:FindFirstChildOfClass("BodyColors")
-
-	if not bodyColors then
-		return nil
-	end
-
-	local propertyName = bodyPartName .. "Color"
-
-	local brickColor = bodyColors[propertyName]
-
-	if brickColor then
-		return brickColor.Color
-	end
-
-	return nil
-end
-
-local function isNoobAvatar(plr)
+local function isBasicAvatar(plr)
 	if not plr.Character then
 		return false
 	end
 
-	local character = plr.Character
+	local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
 
-	local headColor = getBodyColor(character, "Head")
-	local torsoColor = getBodyColor(character, "Torso")
-	local leftArmColor = getBodyColor(character, "LeftArm")
-	local rightArmColor = getBodyColor(character, "RightArm")
-	local leftLegColor = getBodyColor(character, "LeftLeg")
-	local rightLegColor = getBodyColor(character, "RightLeg")
-
-	if not headColor
-		or not torsoColor
-		or not leftArmColor
-		or not rightArmColor
-		or not leftLegColor
-		or not rightLegColor
-	then
+	if not humanoid then
 		return false
 	end
 
-	-- Classic Roblox noob colors:
-	-- Head/arms = yellow
-	-- Torso = blue
-	-- Legs = green
+	local success, description = pcall(function()
+		return humanoid:GetAppliedDescription()
+	end)
 
-	local yellow = Color3.fromRGB(245, 205, 48)
-	local blue = Color3.fromRGB(13, 105, 172)
-	local green = Color3.fromRGB(75, 151, 75)
-
-	local function closeColor(a, b)
-		return math.abs(a.R - b.R) < 0.08
-			and math.abs(a.G - b.G) < 0.08
-			and math.abs(a.B - b.B) < 0.08
+	if not success or not description then
+		return false
 	end
 
-	if closeColor(headColor, yellow)
-		and closeColor(leftArmColor, yellow)
-		and closeColor(rightArmColor, yellow)
-		and closeColor(torsoColor, blue)
-		and closeColor(leftLegColor, green)
-		and closeColor(rightLegColor, green)
-	then
+	local accessories = 0
+
+	if description.HatAccessory ~= "" then
+		accessories += 1
+	end
+
+	if description.HairAccessory ~= "" then
+		accessories += 1
+	end
+
+	if description.FaceAccessory ~= "" then
+		accessories += 1
+	end
+
+	if description.NeckAccessory ~= "" then
+		accessories += 1
+	end
+
+	if description.ShoulderAccessory ~= "" then
+		accessories += 1
+	end
+
+	if description.FrontAccessory ~= "" then
+		accessories += 1
+	end
+
+	if description.BackAccessory ~= "" then
+		accessories += 1
+	end
+
+	if description.WaistAccessory ~= "" then
+		accessories += 1
+	end
+
+	local hasClothes =
+		description.Shirt ~= 0
+		or description.Pants ~= 0
+
+	-- Very basic avatar:
+	-- no clothes + no accessories
+	if not hasClothes and accessories == 0 then
 		return true
 	end
 
 	return false
-end
-
-local function isBaconAvatar(plr)
-	if not plr.Character then
-		return false
-	end
-
-	local character = plr.Character
-
-	-- Look for common bacon/default hair names.
-	for _, object in ipairs(character:GetChildren()) do
-		if object:IsA("Accessory") then
-			local name = string.lower(object.Name)
-
-			if string.find(name, "bacon")
-				or string.find(name, "pal hair")
-				or string.find(name, "bacon hair")
-			then
-				return true
-			end
-		end
-	end
-
-	-- Also check for classic R6-style avatar
-	-- with very few accessories.
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-
-	if humanoid and humanoid.RigType == Enum.HumanoidRigType.R6 then
-		local accessoryCount = 0
-
-		for _, object in ipairs(character:GetChildren()) do
-			if object:IsA("Accessory") then
-				accessoryCount += 1
-			end
-		end
-
-		-- A classic R6 avatar with only 1 accessory
-		-- is treated as a possible bacon avatar.
-		if accessoryCount <= 1 then
-			for _, object in ipairs(character:GetChildren()) do
-				if object:IsA("Accessory") then
-					local name = string.lower(object.Name)
-
-					if string.find(name, "hair")
-						or string.find(name, "pal")
-					then
-						return true
-					end
-				end
-			end
-		end
-	end
-
-	return false
-end
-
---==================================================
--- FIND BAD AVATAR
---==================================================
-
-local function findBadAvatar()
-	if not ENABLE_AVATAR_CHECK then
-		return false, nil, nil
-	end
-
-	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr ~= player then
-
-			if REJECT_NOOB and isNoobAvatar(plr) then
-				return true, plr, "NOOB"
-			end
-
-			if REJECT_BACON and isBaconAvatar(plr) then
-				return true, plr, "BACON"
-			end
-
-		end
-	end
-
-	return false, nil, nil
 end
 
 --==================================================
@@ -515,14 +521,17 @@ end
 --==================================================
 
 local function updateCurrentServer()
+	if not isCurrentController() then
+		return true, nil
+	end
+
 	local count = #Players:GetPlayers()
 
 	playerCount.Text =
 		tostring(count)
 		.. " / "
-		.. tostring(MAX_PLAYERS)
+		.. tostring(game.Players.MaxPlayers)
 
-	-- Account age check
 	local badAccount, badPlayer = hasNewAccount()
 
 	if badAccount then
@@ -530,25 +539,14 @@ local function updateCurrentServer()
 		accountStatus.TextColor3 =
 			Color3.fromRGB(255, 100, 100)
 
-		return false, badPlayer, "ACCOUNT"
-	end
-
-	-- Bacon / Noob check
-	local badAvatar, avatarPlayer, avatarType = findBadAvatar()
-
-	if badAvatar then
-		accountStatus.Text = "REJECTED"
-		accountStatus.TextColor3 =
-			Color3.fromRGB(255, 100, 100)
-
-		return false, avatarPlayer, avatarType
+		return false, badPlayer
 	end
 
 	accountStatus.Text = "SAFE"
 	accountStatus.TextColor3 =
 		Color3.fromRGB(100, 255, 130)
 
-	return true, nil, nil
+	return true, nil
 end
 
 --==================================================
@@ -556,6 +554,9 @@ end
 --==================================================
 
 local function getServers(cursor)
+	if not isCurrentController() then
+		return nil
+	end
 
 	local baseUrl =
 		"https://games.roblox.com/v1/games/"
@@ -565,15 +566,15 @@ local function getServers(cursor)
 	local url = baseUrl
 
 	if cursor then
-		url = url .. "&cursor=" .. HttpService:UrlEncode(cursor)
+		url =
+			url
+			.. "&cursor="
+			.. HttpService:UrlEncode(cursor)
 	end
 
 	local success, result = pcall(function()
-
 		local raw = game:HttpGet(url)
-
 		return HttpService:JSONDecode(raw)
-
 	end)
 
 	if success and result then
@@ -587,11 +588,15 @@ end
 -- FIND SMALL SERVER
 --==================================================
 
-local function findSmallServer()
-
+local function findSmallServer(sessionId)
 	local cursor = nil
 
 	for page = 1, MAX_PAGES do
+
+		-- STOP immediately if this search is no longer valid.
+		if not isCurrentSession(sessionId) then
+			return nil
+		end
 
 		status.Text =
 			"● Searching servers... Page "
@@ -607,11 +612,19 @@ local function findSmallServer()
 
 		local result = getServers(cursor)
 
+		if not isCurrentSession(sessionId) then
+			return nil
+		end
+
 		if not result or not result.data then
 			return nil
 		end
 
 		for _, server in ipairs(result.data) do
+
+			if not isCurrentSession(sessionId) then
+				return nil
+			end
 
 			if server.id ~= game.JobId then
 
@@ -621,9 +634,7 @@ local function findSmallServer()
 				then
 					return server
 				end
-
 			end
-
 		end
 
 		cursor = result.nextPageCursor
@@ -639,25 +650,41 @@ local function findSmallServer()
 end
 
 --==================================================
--- TELEPORT FAILURE HANDLER
+-- TELEPORT FAILURE
 --==================================================
 
-local teleporting = false
-local hopping = false
-
 TeleportService.TeleportInitFailed:Connect(
-	function(failedPlayer, teleportResult, errorMessage)
+	function(
+		failedPlayer,
+		teleportResult,
+		errorMessage
+	)
 
 		if failedPlayer ~= player then
 			return
 		end
 
-		-- Teleport failed.
-		-- IMPORTANT:
-		-- We DO NOT automatically search again.
+		-- Ignore events belonging to old controllers.
+		if not isCurrentController() then
+			return
+		end
 
-		teleporting = false
+		if not teleporting then
+			return
+		end
+
+		print(
+			"[SERVER HOP] Teleport failed:",
+			tostring(teleportResult),
+			errorMessage or ""
+		)
+
+		-- VERY IMPORTANT:
+		-- Stop the current session completely.
+		newSession()
+
 		hopping = false
+		teleporting = false
 
 		hop.Active = true
 		leave.Active = true
@@ -667,28 +694,19 @@ TeleportService.TeleportInitFailed:Connect(
 		progress.Size =
 			UDim2.new(0, 0, 1, 0)
 
-		accountStatus.Text = "TELEPORT FAILED"
+		accountStatus.Text = "FAILED"
 		accountStatus.TextColor3 =
 			Color3.fromRGB(255, 100, 100)
 
-		status.Text =
-			"● Teleport failed: "
-			.. tostring(teleportResult)
+		local reason = tostring(teleportResult)
 
-		task.delay(3, function()
-
-			if not hopping then
-
-				accountStatus.Text = "READY"
-				accountStatus.TextColor3 =
-					Color3.fromRGB(100, 255, 130)
-
-				status.Text =
-					"● Click SERVER HOP to try again"
-
-			end
-
-		end)
+		if string.find(reason, "GameFull") then
+			status.Text =
+				"● Server full. Click SERVER HOP to retry."
+		else
+			status.Text =
+				"● Teleport failed. Click SERVER HOP to retry."
+		end
 	end
 )
 
@@ -698,11 +716,20 @@ TeleportService.TeleportInitFailed:Connect(
 
 local function serverHop()
 
+	if not isCurrentController() then
+		return
+	end
+
+	-- Prevent double clicking.
 	if hopping or teleporting then
 		return
 	end
 
+	-- Create a NEW search session.
+	local sessionId = newSession()
+
 	hopping = true
+	teleporting = false
 
 	hop.Active = false
 	leave.Active = false
@@ -717,56 +744,16 @@ local function serverHop()
 		UDim2.new(0, 0, 1, 0)
 
 	--==================================================
-	-- CHECK CURRENT SERVER FIRST
-	--==================================================
-
-	local safe, badPlayer, badType = updateCurrentServer()
-
-	if not safe then
-
-		if badType == "ACCOUNT" then
-
-			status.Text =
-				"● "
-				.. badPlayer.Name
-				.. " is under "
-				.. MIN_ACCOUNT_AGE
-				.. " days"
-
-		elseif badType == "NOOB" then
-
-			status.Text =
-				"● "
-				.. badPlayer.Name
-				.. " is a NOOB avatar"
-
-		elseif badType == "BACON" then
-
-			status.Text =
-				"● "
-				.. badPlayer.Name
-				.. " is a BACON avatar"
-
-		else
-
-			status.Text =
-				"● Server rejected"
-
-		end
-
-		accountStatus.Text = "REJECTED"
-		accountStatus.TextColor3 =
-			Color3.fromRGB(255, 100, 100)
-
-		task.wait(0.8)
-
-	end
-
-	--==================================================
 	-- SEARCH
 	--==================================================
 
+	local server = nil
+
 	for attempt = 1, MAX_RETRIES do
+
+		if not isCurrentSession(sessionId) then
+			return
+		end
 
 		status.Text =
 			"● Searching... "
@@ -774,127 +761,160 @@ local function serverHop()
 			.. "/"
 			.. MAX_RETRIES
 
-		local server = findSmallServer()
+		server = findSmallServer(sessionId)
+
+		if not isCurrentSession(sessionId) then
+			return
+		end
 
 		if server then
+			break
+		end
 
-			playerCount.Text =
-				tostring(server.playing)
-				.. " / "
-				.. tostring(server.maxPlayers)
+		status.Text =
+			"● No small server found..."
 
-			accountStatus.Text = "SERVER FOUND"
-			accountStatus.TextColor3 =
-				Color3.fromRGB(100, 255, 130)
+		task.wait(1)
+	end
 
-			status.Text =
-				"● Found "
-				.. server.playing
-				.. " player(s) • Joining..."
+	--==================================================
+	-- NO SERVER
+	--==================================================
 
-			hop.Text = "🚀  JOINING..."
+	if not isCurrentSession(sessionId) then
+		return
+	end
 
-			progress.Size =
-				UDim2.new(1, 0, 1, 0)
+	if not server then
+		resetHopButton(
+			"No 1-2 player server found.",
+			sessionId
+		)
 
-			task.wait(0.5)
+		return
+	end
 
-			--==================================================
-			-- TELEPORT
-			--==================================================
+	--==================================================
+	-- SERVER FOUND
+	--==================================================
 
-			teleporting = true
+	if not isCurrentSession(sessionId) then
+		return
+	end
 
-			local success, errorMessage =
-				pcall(function()
+	playerCount.Text =
+		tostring(server.playing)
+		.. " / "
+		.. tostring(server.maxPlayers)
 
-					TeleportService:TeleportToPlaceInstance(
-						game.PlaceId,
-						server.id,
-						player
-					)
+	accountStatus.Text = "SERVER FOUND"
+	accountStatus.TextColor3 =
+		Color3.fromRGB(100, 255, 130)
 
-				end)
+	status.Text =
+		"● Found "
+		.. server.playing
+		.. " player(s) • Joining..."
 
-			if success then
+	hop.Text = "🚀  JOINING..."
 
-				-- IMPORTANT:
-				-- Do NOT return the UI to READY here.
-				-- Roblox may still be processing teleport.
-				-- TeleportInitFailed will handle actual failure.
+	progress.Size =
+		UDim2.new(1, 0, 1, 0)
 
-				status.Text =
-					"● Teleporting..."
+	task.wait(0.5)
 
+	--==================================================
+	-- TELEPORT
+	--==================================================
+
+	if not isCurrentSession(sessionId) then
+		return
+	end
+
+	teleporting = true
+
+	local teleportCallSuccess, teleportError =
+		pcall(function()
+
+			TeleportService:TeleportToPlaceInstance(
+				game.PlaceId,
+				server.id,
+				player
+			)
+
+		end)
+
+	-- pcall success only means the function call itself
+	-- did not throw an immediate Lua error.
+
+	if not teleportCallSuccess then
+
+		print(
+			"[SERVER HOP] Teleport call error:",
+			teleportError
+		)
+
+		resetHopButton(
+			"Teleport failed. Click SERVER HOP to retry.",
+			sessionId
+		)
+
+		return
+	end
+
+	if not isCurrentSession(sessionId) then
+		return
+	end
+
+	status.Text = "● Teleporting..."
+	hop.Text = "🚀  JOINING..."
+
+	--==================================================
+	-- TELEPORT TIMEOUT
+	--==================================================
+	-- IMPORTANT:
+	-- This only unlocks the button.
+	-- It NEVER calls serverHop().
+	-- It NEVER searches again.
+
+	task.spawn(function()
+
+		local started = os.clock()
+
+		while true do
+
+			if not isCurrentSession(sessionId) then
 				return
+			end
 
-			else
+			if not teleporting then
+				return
+			end
 
-				-- This is an immediate Lua/API error.
-				-- We do NOT search again.
+			if os.clock() - started >= TELEPORT_TIMEOUT then
 
-				teleporting = false
-				hopping = false
+				-- Check whether we actually left
+				-- the original server.
 
-				hop.Active = true
-				leave.Active = true
+				if game.JobId ~= server.id then
+					return
+				end
 
-				hop.Text = "🔄  SERVER HOP"
+				print(
+					"[SERVER HOP] Teleport timed out."
+				)
 
-				accountStatus.Text = "FAILED"
-				accountStatus.TextColor3 =
-					Color3.fromRGB(255, 100, 100)
-
-				progress.Size =
-					UDim2.new(0, 0, 1, 0)
-
-				status.Text =
-					"● Teleport failed — click SERVER HOP again"
-
-				warn(
-					"[ServerHop] Teleport error: ",
-					errorMessage
+				resetHopButton(
+					"Teleport timed out. Click SERVER HOP to retry.",
+					sessionId
 				)
 
 				return
 			end
 
-		else
-
-			-- No server found on this search attempt.
-			-- Continue searching because this is not a teleport failure.
-
-			status.Text =
-				"● No 1-2 player server found..."
-
-			hop.Text = "🔍  SEARCHING..."
-
-			task.wait(1)
-
+			task.wait(0.5)
 		end
-	end
-
-	--==================================================
-	-- SEARCH LIMIT REACHED
-	--==================================================
-
-	hopping = false
-	teleporting = false
-
-	hop.Active = true
-	leave.Active = true
-
-	hop.Text = "🔄  SERVER HOP"
-
-	accountStatus.Text = "READY"
-	accountStatus.TextColor3 =
-		Color3.fromRGB(100, 255, 130)
-
-	progress.Size =
-		UDim2.new(0, 0, 1, 0)
-
-	status.Text =
-		"● Search finished — click SERVER HOP again"
+	end)
 end
 
 --==================================================
@@ -903,12 +923,15 @@ end
 
 hop.MouseButton1Click:Connect(function()
 
+	if not isCurrentController() then
+		return
+	end
+
 	if hopping or teleporting then
 		return
 	end
 
 	serverHop()
-
 end)
 
 --==================================================
@@ -926,12 +949,9 @@ header.InputBegan:Connect(function(input)
 	then
 
 		dragging = true
-
 		dragStart = input.Position
 		startPosition = main.Position
-
 	end
-
 end)
 
 UserInputService.InputChanged:Connect(function(input)
@@ -954,9 +974,7 @@ UserInputService.InputChanged:Connect(function(input)
 				startPosition.Y.Scale,
 				startPosition.Y.Offset + delta.Y
 			)
-
 	end
-
 end)
 
 UserInputService.InputEnded:Connect(function(input)
@@ -966,16 +984,18 @@ UserInputService.InputEnded:Connect(function(input)
 	then
 
 		dragging = false
-
 	end
-
 end)
 
 --==================================================
 -- HOVER EFFECTS
 --==================================================
 
-local function addHover(button, normalColor, hoverColor)
+local function addHover(
+	button,
+	normalColor,
+	hoverColor
+)
 
 	button.MouseEnter:Connect(function()
 
@@ -1000,7 +1020,6 @@ local function addHover(button, normalColor, hoverColor)
 		):Play()
 
 	end)
-
 end
 
 addHover(
@@ -1022,135 +1041,33 @@ addHover(
 )
 
 --==================================================
--- PLAYER ADDED
+-- PLAYER UPDATE
 --==================================================
 
-Players.PlayerAdded:Connect(function(plr)
+Players.PlayerAdded:Connect(function()
 
-	task.wait(1)
+	task.wait(0.5)
 
-	if not hopping and not teleporting then
-
-		local safe, badPlayer, badType =
-			updateCurrentServer()
-
-		if not safe then
-
-			if badType == "ACCOUNT" then
-
-				status.Text =
-					"● "
-					.. badPlayer.Name
-					.. " is under "
-					.. MIN_ACCOUNT_AGE
-					.. " days"
-
-			elseif badType == "NOOB" then
-
-				status.Text =
-					"● "
-					.. badPlayer.Name
-					.. " is a NOOB avatar"
-
-			elseif badType == "BACON" then
-
-				status.Text =
-					"● "
-					.. badPlayer.Name
-					.. " is a BACON avatar"
-
-			end
-
-			accountStatus.Text = "REJECTED"
-			accountStatus.TextColor3 =
-				Color3.fromRGB(255, 100, 100)
-
-		end
-
+	if not isCurrentController() then
+		return
 	end
 
+	if not hopping and not teleporting then
+		updateCurrentServer()
+	end
 end)
-
---==================================================
--- PLAYER REMOVING
---==================================================
 
 Players.PlayerRemoving:Connect(function()
 
 	task.wait(0.2)
 
-	if not hopping and not teleporting then
-
-		updateCurrentServer()
-
-	end
-
-end)
-
---==================================================
--- CHARACTER APPEARANCE LOADED
---==================================================
-
-local function monitorPlayer(plr)
-
-	if plr == player then
+	if not isCurrentController() then
 		return
 	end
 
-	plr.CharacterAppearanceLoaded:Connect(function()
-
-		task.wait(0.5)
-
-		if hopping or teleporting then
-			return
-		end
-
-		local safe, badPlayer, badType =
-			updateCurrentServer()
-
-		if not safe then
-
-			if badType == "NOOB" then
-
-				status.Text =
-					"● "
-					.. badPlayer.Name
-					.. " is a NOOB avatar"
-
-			elseif badType == "BACON" then
-
-				status.Text =
-					"● "
-					.. badPlayer.Name
-					.. " is a BACON avatar"
-
-			elseif badType == "ACCOUNT" then
-
-				status.Text =
-					"● "
-					.. badPlayer.Name
-					.. " is under "
-					.. MIN_ACCOUNT_AGE
-					.. " days"
-
-			end
-
-			accountStatus.Text = "REJECTED"
-			accountStatus.TextColor3 =
-				Color3.fromRGB(255, 100, 100)
-
-		end
-
-	end)
-
-end
-
-for _, plr in ipairs(Players:GetPlayers()) do
-	monitorPlayer(plr)
-end
-
-Players.PlayerAdded:Connect(function(plr)
-	monitorPlayer(plr)
+	if not hopping and not teleporting then
+		updateCurrentServer()
+	end
 end)
 
 --==================================================
@@ -1161,43 +1078,33 @@ task.spawn(function()
 
 	task.wait(3)
 
+	if not isCurrentController() then
+		return
+	end
+
 	if hopping or teleporting then
 		return
 	end
 
-	local safe, badPlayer, badType =
+	local safe, badPlayer =
 		updateCurrentServer()
 
-	if not safe then
+	if not safe and badPlayer then
 
-		if badType == "ACCOUNT" then
-
-			status.Text =
-				"● "
-				.. badPlayer.Name
-				.. " is under "
-				.. MIN_ACCOUNT_AGE
-				.. " days"
-
-		elseif badType == "NOOB" then
-
-			status.Text =
-				"● "
-				.. badPlayer.Name
-				.. " is a NOOB avatar"
-
-		elseif badType == "BACON" then
-
-			status.Text =
-				"● "
-				.. badPlayer.Name
-				.. " is a BACON avatar"
-
-		end
+		status.Text =
+			"● "
+			.. badPlayer.Name
+			.. " is under "
+			.. MIN_ACCOUNT_AGE
+			.. " days"
 
 		accountStatus.Text = "REJECTED"
 		accountStatus.TextColor3 =
 			Color3.fromRGB(255, 100, 100)
+
+		-- IMPORTANT:
+		-- Do NOT automatically hop.
+		-- User must click SERVER HOP.
 
 	else
 
@@ -1205,7 +1112,6 @@ task.spawn(function()
 			"● Server accepted!"
 
 	end
-
 end)
 
 --==================================================
@@ -1214,7 +1120,10 @@ end)
 
 print("🥚 ADVANCED SERVER HOP LOADED")
 print("Small server: 1-2 players")
-print("Minimum account age: " .. MIN_ACCOUNT_AGE .. " days")
-print("Bacon checker: " .. tostring(ENABLE_AVATAR_CHECK))
-print("Noob checker: " .. tostring(REJECT_NOOB))
-print("Auto retry after teleport failure: DISABLED")
+print(
+	"Minimum account age: "
+		.. MIN_ACCOUNT_AGE
+		.. " days"
+)
+print("Teleport failure: MANUAL RETRY ONLY")
+print("Old sessions: INVALIDATED")
