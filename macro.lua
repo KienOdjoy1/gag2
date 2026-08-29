@@ -275,7 +275,6 @@ local function createButton(parent, text, x, y, width, height, color)
     stroke.Thickness = 1
     stroke.Parent = button
 
-    -- Save the actual normal color.
     button:SetAttribute("NormalColorR", color.R)
     button:SetAttribute("NormalColorG", color.G)
     button:SetAttribute("NormalColorB", color.B)
@@ -361,6 +360,8 @@ end
 -- RESIZE
 --==================================================
 
+local minimized = false
+
 local function resizeFrame(height)
 
     if minimized then
@@ -394,7 +395,6 @@ end
 --==================================================
 
 local currentPage = "MENU"
-local minimized = false
 
 local showMainMenu
 local showGameFeatures
@@ -770,7 +770,7 @@ local function setupAntiSit(character)
 end
 
 --==================================================
--- FPS BOOST
+-- PERFORMANCE STORAGE
 --==================================================
 
 local savedEffects = {}
@@ -786,17 +786,41 @@ local savedLighting = {
         Lighting.FogEnd
 }
 
+local lowGraphicsOriginals = {}
+
+--==================================================
+-- SAVE EFFECT
+--==================================================
+
 local function saveEffect(object)
 
     if savedEffects[object] == nil then
 
-        savedEffects[object] = {
-            Enabled = object.Enabled
-        }
+        if object:IsA("ParticleEmitter")
+            or object:IsA("Trail")
+            or object:IsA("Beam")
+            or object:IsA("Smoke")
+            or object:IsA("Fire")
+            or object:IsA("Sparkles")
+            or object:IsA("BloomEffect")
+            or object:IsA("BlurEffect")
+            or object:IsA("ColorCorrectionEffect")
+            or object:IsA("SunRaysEffect")
+            or object:IsA("DepthOfFieldEffect") then
+
+            savedEffects[object] = {
+                Enabled = object.Enabled
+            }
+
+        end
 
     end
 
 end
+
+--==================================================
+-- FPS BOOST
+--==================================================
 
 local function enableFPSBoost()
 
@@ -886,8 +910,6 @@ end
 -- LOW GRAPHICS
 --==================================================
 
-local lowGraphicsOriginals = {}
-
 local function enableLowGraphics()
 
     lowGraphicsEnabled = true
@@ -955,7 +977,7 @@ local function disableLowGraphics()
 end
 
 --==================================================
--- REMOVE EFFECTS
+-- EFFECTS
 --==================================================
 
 local function removeAllEffects()
@@ -973,6 +995,8 @@ local function removeAllEffects()
             or object:IsA("Fire")
             or object:IsA("Sparkles") then
 
+            saveEffect(object)
+
             object.Enabled = false
 
         end
@@ -989,6 +1013,8 @@ local function removeAllEffects()
             or object:IsA("SunRaysEffect")
             or object:IsA("DepthOfFieldEffect") then
 
+            saveEffect(object)
+
             object.Enabled = false
 
         end
@@ -996,7 +1022,7 @@ local function removeAllEffects()
     end
 
     status.Text =
-        "● Garden effects removed"
+        "● Effects removed"
 
     status.TextColor3 =
         colors.purple
@@ -1022,7 +1048,7 @@ local function restoreEffects()
     end
 
     status.Text =
-        "● Garden effects restored"
+        "● Effects restored"
 
     status.TextColor3 =
         colors.blue
@@ -1238,7 +1264,7 @@ showMainMenu = function()
 end
 
 --==================================================
--- GAME FEATURES PAGE
+-- GAME FEATURES
 --==================================================
 
 showGameFeatures = function()
@@ -1277,7 +1303,7 @@ showGameFeatures = function()
     heading.Parent = content
 
     --==================================================
-    -- INSTANT E BUTTON
+    -- INSTANT E
     --==================================================
 
     local instantE =
@@ -1299,7 +1325,7 @@ showGameFeatures = function()
         )
 
     --==================================================
-    -- FLOAT BUTTON
+    -- FLOAT
     --==================================================
 
     local floatButton =
@@ -1321,7 +1347,7 @@ showGameFeatures = function()
         )
 
     --==================================================
-    -- ANTI SIT BUTTON
+    -- ANTI SIT
     --==================================================
 
     local antiSitButton =
@@ -1430,10 +1456,6 @@ showGameFeatures = function()
 
             end
 
-            -- IMPORTANT:
-            -- Always update the button AFTER
-            -- changing antiSitEnabled.
-
             updateToggleButton(
                 antiSitButton,
                 "🪑 ANTI SIT: ON",
@@ -1447,7 +1469,7 @@ showGameFeatures = function()
 end
 
 --==================================================
--- PERFORMANCE PAGE
+-- PERFORMANCE
 --==================================================
 
 showPerformance = function()
@@ -1523,7 +1545,7 @@ showPerformance = function()
         )
 
     --==================================================
-    -- REMOVE EFFECTS
+    -- EFFECTS
     --==================================================
 
     local removeEffectsButton =
@@ -1531,8 +1553,8 @@ showPerformance = function()
             content,
 
             effectsRemoved
-                and "✓ EFFECTS: OFF"
-                or "✦ REMOVE EFFECTS",
+                and "✓ EFFECTS: ON"
+                or "✦ EFFECTS: OFF",
 
             0,
             136,
@@ -1541,7 +1563,7 @@ showPerformance = function()
 
             effectsRemoved
                 and colors.leaf
-                or colors.purple
+                or colors.off
         )
 
     --==================================================
@@ -1583,9 +1605,6 @@ showPerformance = function()
 
             end
 
-            -- FPS Boost does NOT change
-            -- Low Graphics.
-
             updateToggleButton(
                 fpsBoost,
                 "✓ FPS BOOST: ON",
@@ -1600,10 +1619,11 @@ showPerformance = function()
                 lowGraphicsEnabled
             )
 
+            -- FIXED EFFECTS TEXT
             updateToggleButton(
                 removeEffectsButton,
-                "✓ EFFECTS: OFF",
-                "✦ REMOVE EFFECTS",
+                "✓ EFFECTS: ON",
+                "✦ EFFECTS: OFF",
                 effectsRemoved
             )
 
@@ -1619,9 +1639,6 @@ showPerformance = function()
 
             disableFPSBoost()
 
-            -- Normal Graphics does NOT
-            -- change Low Graphics.
-
             updateToggleButton(
                 fpsBoost,
                 "✓ FPS BOOST: ON",
@@ -1636,10 +1653,11 @@ showPerformance = function()
                 lowGraphicsEnabled
             )
 
+            -- FIXED EFFECTS TEXT
             updateToggleButton(
                 removeEffectsButton,
-                "✓ EFFECTS: OFF",
-                "✦ REMOVE EFFECTS",
+                "✓ EFFECTS: ON",
+                "✦ EFFECTS: OFF",
                 effectsRemoved
             )
 
@@ -1647,7 +1665,7 @@ showPerformance = function()
     )
 
     --==================================================
-    -- REMOVE EFFECTS CLICK
+    -- EFFECTS CLICK
     --==================================================
 
     removeEffectsButton.MouseButton1Click:Connect(
@@ -1663,10 +1681,14 @@ showPerformance = function()
 
             end
 
+            -- FIXED
+            -- ON means effects feature is active
+            -- OFF means effects feature is inactive
+
             updateToggleButton(
                 removeEffectsButton,
-                "✓ EFFECTS: OFF",
-                "✦ REMOVE EFFECTS",
+                "✓ EFFECTS: ON",
+                "✦ EFFECTS: OFF",
                 effectsRemoved
             )
 
@@ -1704,10 +1726,6 @@ showPerformance = function()
 
             end
 
-            -- IMPORTANT:
-            -- Low Graphics is completely
-            -- independent from FPS Boost.
-
             updateToggleButton(
                 lowGraphics,
                 "✓ LOW GRAPHICS: ON",
@@ -1722,10 +1740,11 @@ showPerformance = function()
                 fpsBoostEnabled
             )
 
+            -- FIXED EFFECTS TEXT
             updateToggleButton(
                 removeEffectsButton,
-                "✓ EFFECTS: OFF",
-                "✦ REMOVE EFFECTS",
+                "✓ EFFECTS: ON",
+                "✦ EFFECTS: OFF",
                 effectsRemoved
             )
 
@@ -1735,7 +1754,7 @@ showPerformance = function()
 end
 
 --==================================================
--- TELEPORT PAGE
+-- TELEPORT
 --==================================================
 
 showTeleport = function()
@@ -1834,7 +1853,7 @@ showTeleport = function()
         )
 
     --==================================================
-    -- CLEAR POSITIONS
+    -- CLEAR
     --==================================================
 
     local clear =
@@ -2211,7 +2230,7 @@ UserInputService.InputBegan:Connect(
 )
 
 --==================================================
--- START
+-- START GUI
 --==================================================
 
 showMainMenu()
