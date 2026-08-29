@@ -240,7 +240,7 @@ title.Size = UDim2.new(1, -105, 0, 28)
 title.Position = UDim2.new(0, 52, 0, 9)
 
 title.BackgroundTransparency = 1
-title.Text = "🌻  GARDEN MENU"
+title.Text = "🌻 KYOSH"
 
 title.TextColor3 = colors.text
 title.TextSize = 19
@@ -1346,7 +1346,7 @@ showMainMenu = function()
     heading.BackgroundTransparency = 1
 
     heading.Text =
-        "🌱  WHAT ARE WE GROWING TODAY?"
+        "🌱 GAG 2 - MACRO?"
 
     heading.TextColor3 =
         Color3.fromRGB(
