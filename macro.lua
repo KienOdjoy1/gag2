@@ -80,7 +80,7 @@ main.BackgroundColor3 = colors.panel
 main.BorderSizePixel = 0
 
 main.Active = true
-main.Draggable = true
+main.Draggable = false
 
 main.Parent = gui
 
@@ -93,6 +93,76 @@ mainStroke.Color = colors.leaf
 mainStroke.Thickness = 2
 mainStroke.Transparency = 0.15
 mainStroke.Parent = main
+
+--==================================================
+-- CUSTOM DRAG SYSTEM
+--==================================================
+
+local dragging = false
+local dragStart = nil
+local startPosition = nil
+local dragMoved = false
+
+local function beginDrag(input)
+    dragging = true
+    dragMoved = false
+
+    dragStart = input.Position
+    startPosition = main.Position
+
+    input.Changed:Connect(function()
+
+        if input.UserInputState == Enum.UserInputState.End then
+            dragging = false
+        end
+
+    end)
+end
+
+local function updateDrag(input)
+
+    if not dragging then
+        return
+    end
+
+    local delta = input.Position - dragStart
+
+    if math.abs(delta.X) > 5
+        or math.abs(delta.Y) > 5 then
+
+        dragMoved = true
+
+    end
+
+    main.Position = UDim2.new(
+        startPosition.X.Scale,
+        startPosition.X.Offset + delta.X,
+
+        startPosition.Y.Scale,
+        startPosition.Y.Offset + delta.Y
+    )
+
+end
+
+--==================================================
+-- MAIN FRAME DRAG
+--==================================================
+
+main.InputBegan:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        beginDrag(input)
+    end
+
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        updateDrag(input)
+    end
+
+end)
 
 --==================================================
 -- HEADER
@@ -121,6 +191,18 @@ grassStrip.BackgroundColor3 = colors.leafLight
 grassStrip.BorderSizePixel = 0
 
 grassStrip.Parent = woodHeader
+
+--==================================================
+-- HEADER DRAG
+--==================================================
+
+woodHeader.InputBegan:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        beginDrag(input)
+    end
+
+end)
 
 --==================================================
 -- HEADER DECORATIONS
@@ -202,11 +284,77 @@ minimize.TextColor3 = colors.text
 minimize.TextSize = 21
 minimize.Font = Enum.Font.GothamBold
 
+minimize.AutoButtonColor = false
+
 minimize.Parent = main
 
 local minimizeCorner = Instance.new("UICorner")
 minimizeCorner.CornerRadius = UDim.new(0, 9)
 minimizeCorner.Parent = minimize
+
+local minimizeStroke = Instance.new("UIStroke")
+minimizeStroke.Color = colors.leafLight
+minimizeStroke.Thickness = 1
+minimizeStroke.Transparency = 0.25
+minimizeStroke.Parent = minimize
+
+--==================================================
+-- MINIMIZE BUTTON DRAG
+--==================================================
+
+local minimizeDragging = false
+local minimizeDragStart = nil
+local minimizeStartPosition = nil
+local minimizeMoved = false
+
+minimize.InputBegan:Connect(function(input)
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+        minimizeDragging = true
+        minimizeMoved = false
+
+        minimizeDragStart = input.Position
+        minimizeStartPosition = main.Position
+
+        input.Changed:Connect(function()
+
+            if input.UserInputState == Enum.UserInputState.End then
+                minimizeDragging = false
+            end
+
+        end)
+
+    end
+
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+    if minimizeDragging
+        and input.UserInputType == Enum.UserInputType.MouseMovement then
+
+        local delta =
+            input.Position - minimizeDragStart
+
+        if math.abs(delta.X) > 5
+            or math.abs(delta.Y) > 5 then
+
+            minimizeMoved = true
+
+        end
+
+        main.Position = UDim2.new(
+            minimizeStartPosition.X.Scale,
+            minimizeStartPosition.X.Offset + delta.X,
+
+            minimizeStartPosition.Y.Scale,
+            minimizeStartPosition.Y.Offset + delta.Y
+        )
+
+    end
+
+end)
 
 --==================================================
 -- STATUS
@@ -1302,10 +1450,6 @@ showGameFeatures = function()
 
     heading.Parent = content
 
-    --==================================================
-    -- INSTANT E
-    --==================================================
-
     local instantE =
         createButton(
             content,
@@ -1323,10 +1467,6 @@ showGameFeatures = function()
                 and colors.leaf
                 or colors.off
         )
-
-    --==================================================
-    -- FLOAT
-    --==================================================
 
     local floatButton =
         createButton(
@@ -1346,10 +1486,6 @@ showGameFeatures = function()
                 or colors.off
         )
 
-    --==================================================
-    -- ANTI SIT
-    --==================================================
-
     local antiSitButton =
         createButton(
             content,
@@ -1368,21 +1504,13 @@ showGameFeatures = function()
                 or colors.off
         )
 
-    --==================================================
-    -- INSTANT E CLICK
-    --==================================================
-
     instantE.MouseButton1Click:Connect(
         function()
 
             if instantEEnabled then
-
                 disableInstantE()
-
             else
-
                 enableInstantE()
-
             end
 
             updateToggleButton(
@@ -1394,10 +1522,6 @@ showGameFeatures = function()
 
         end
     )
-
-    --==================================================
-    -- FLOAT CLICK
-    --==================================================
 
     floatButton.MouseButton1Click:Connect(
         function()
@@ -1413,10 +1537,6 @@ showGameFeatures = function()
 
         end
     )
-
-    --==================================================
-    -- ANTI SIT CLICK
-    --==================================================
 
     antiSitButton.MouseButton1Click:Connect(
         function()
@@ -1507,10 +1627,6 @@ showPerformance = function()
 
     heading.Parent = content
 
-    --==================================================
-    -- FPS BOOST
-    --==================================================
-
     local fpsBoost =
         createButton(
             content,
@@ -1529,10 +1645,6 @@ showPerformance = function()
                 or colors.off
         )
 
-    --==================================================
-    -- NORMAL GRAPHICS
-    --==================================================
-
     local normalGraphics =
         createButton(
             content,
@@ -1543,10 +1655,6 @@ showPerformance = function()
             45,
             colors.blue
         )
-
-    --==================================================
-    -- EFFECTS
-    --==================================================
 
     local removeEffectsButton =
         createButton(
@@ -1566,10 +1674,6 @@ showPerformance = function()
                 or colors.off
         )
 
-    --==================================================
-    -- LOW GRAPHICS
-    --==================================================
-
     local lowGraphics =
         createButton(
             content,
@@ -1588,21 +1692,13 @@ showPerformance = function()
                 or colors.off
         )
 
-    --==================================================
-    -- FPS BOOST CLICK
-    --==================================================
-
     fpsBoost.MouseButton1Click:Connect(
         function()
 
             if fpsBoostEnabled then
-
                 disableFPSBoost()
-
             else
-
                 enableFPSBoost()
-
             end
 
             updateToggleButton(
@@ -1619,7 +1715,6 @@ showPerformance = function()
                 lowGraphicsEnabled
             )
 
-            -- FIXED EFFECTS TEXT
             updateToggleButton(
                 removeEffectsButton,
                 "✓ EFFECTS: ON",
@@ -1629,10 +1724,6 @@ showPerformance = function()
 
         end
     )
-
-    --==================================================
-    -- NORMAL GRAPHICS CLICK
-    --==================================================
 
     normalGraphics.MouseButton1Click:Connect(
         function()
@@ -1653,7 +1744,6 @@ showPerformance = function()
                 lowGraphicsEnabled
             )
 
-            -- FIXED EFFECTS TEXT
             updateToggleButton(
                 removeEffectsButton,
                 "✓ EFFECTS: ON",
@@ -1663,27 +1753,15 @@ showPerformance = function()
 
         end
     )
-
-    --==================================================
-    -- EFFECTS CLICK
-    --==================================================
 
     removeEffectsButton.MouseButton1Click:Connect(
         function()
 
             if effectsRemoved then
-
                 restoreEffects()
-
             else
-
                 removeAllEffects()
-
             end
-
-            -- FIXED
-            -- ON means effects feature is active
-            -- OFF means effects feature is inactive
 
             updateToggleButton(
                 removeEffectsButton,
@@ -1709,21 +1787,13 @@ showPerformance = function()
         end
     )
 
-    --==================================================
-    -- LOW GRAPHICS CLICK
-    --==================================================
-
     lowGraphics.MouseButton1Click:Connect(
         function()
 
             if lowGraphicsEnabled then
-
                 disableLowGraphics()
-
             else
-
                 enableLowGraphics()
-
             end
 
             updateToggleButton(
@@ -1740,7 +1810,6 @@ showPerformance = function()
                 fpsBoostEnabled
             )
 
-            -- FIXED EFFECTS TEXT
             updateToggleButton(
                 removeEffectsButton,
                 "✓ EFFECTS: ON",
@@ -1792,10 +1861,6 @@ showTeleport = function()
 
     heading.Parent = content
 
-    --==================================================
-    -- SAVE PLOT 1
-    --==================================================
-
     local save1 =
         createButton(
             content,
@@ -1806,10 +1871,6 @@ showTeleport = function()
             45,
             colors.leaf
         )
-
-    --==================================================
-    -- TELEPORT PLOT 1
-    --==================================================
 
     local teleport1 =
         createButton(
@@ -1822,10 +1883,6 @@ showTeleport = function()
             colors.blue
         )
 
-    --==================================================
-    -- SAVE PLOT 2
-    --==================================================
-
     local save2 =
         createButton(
             content,
@@ -1836,10 +1893,6 @@ showTeleport = function()
             45,
             colors.leaf
         )
-
-    --==================================================
-    -- TELEPORT PLOT 2
-    --==================================================
 
     local teleport2 =
         createButton(
@@ -1852,10 +1905,6 @@ showTeleport = function()
             colors.blue
         )
 
-    --==================================================
-    -- CLEAR
-    --==================================================
-
     local clear =
         createButton(
             content,
@@ -1866,10 +1915,6 @@ showTeleport = function()
             40,
             colors.red
         )
-
-    --==================================================
-    -- SAVE 1
-    --==================================================
 
     save1.MouseButton1Click:Connect(
         function()
@@ -1924,17 +1969,9 @@ showTeleport = function()
         end
     )
 
-    --==================================================
-    -- TELEPORT 1
-    --==================================================
-
     teleport1.MouseButton1Click:Connect(
         teleportToPosition1
     )
-
-    --==================================================
-    -- SAVE 2
-    --==================================================
 
     save2.MouseButton1Click:Connect(
         function()
@@ -1989,17 +2026,9 @@ showTeleport = function()
         end
     )
 
-    --==================================================
-    -- TELEPORT 2
-    --==================================================
-
     teleport2.MouseButton1Click:Connect(
         teleportToPosition2
     )
-
-    --==================================================
-    -- CLEAR
-    --==================================================
 
     clear.MouseButton1Click:Connect(
         function()
@@ -2023,7 +2052,7 @@ showTeleport = function()
 end
 
 --==================================================
--- MINIMIZE
+-- MINIMIZE / K LOGO
 --==================================================
 
 local minimizedSize =
@@ -2031,11 +2060,18 @@ local minimizedSize =
         0,
         58,
         0,
-        48
+        58
     )
 
 minimize.MouseButton1Click:Connect(
     function()
+
+        -- If the user dragged the K logo,
+        -- do NOT restore the menu.
+        if minimizeMoved then
+            minimizeMoved = false
+            return
+        end
 
         minimized =
             not minimized
@@ -2049,6 +2085,18 @@ minimize.MouseButton1Click:Connect(
 
             leafLeft.Visible = false
             leafRight.Visible = false
+            grassStrip.Visible = false
+            woodHeader.Visible = false
+
+            -- K LOGO STYLE
+            main.BackgroundColor3 =
+                colors.soil
+
+            mainStroke.Color =
+                colors.leafLight
+
+            mainStroke.Thickness = 3
+            mainStroke.Transparency = 0
 
             TweenService:Create(
                 main,
@@ -2068,21 +2116,34 @@ minimize.MouseButton1Click:Connect(
 
             minimize.Size =
                 UDim2.new(
-                    0,
-                    42,
-                    0,
-                    36
+                    1,
+                    -8,
+                    1,
+                    -8
                 )
 
             minimize.Position =
                 UDim2.new(
                     0,
-                    8,
+                    4,
                     0,
-                    6
+                    4
                 )
 
-            minimize.Text = "+"
+            minimize.BackgroundColor3 =
+                colors.soilDark
+
+            minimize.Text =
+                "K"
+
+            minimize.TextColor3 =
+                colors.gold
+
+            minimize.TextSize =
+                25
+
+            minimize.Font =
+                Enum.Font.GothamBlack
 
         else
 
@@ -2103,6 +2164,15 @@ minimize.MouseButton1Click:Connect(
                 height = 325
 
             end
+
+            main.BackgroundColor3 =
+                colors.panel
+
+            mainStroke.Color =
+                colors.leaf
+
+            mainStroke.Thickness = 2
+            mainStroke.Transparency = 0.15
 
             TweenService:Create(
                 main,
@@ -2125,21 +2195,6 @@ minimize.MouseButton1Click:Connect(
 
             ):Play()
 
-            task.delay(
-                0.15,
-                function()
-
-                    content.Visible = true
-                    subtitle.Visible = true
-                    status.Visible = true
-                    title.Visible = true
-
-                    leafLeft.Visible = true
-                    leafRight.Visible = true
-
-                end
-            )
-
             minimize.Size =
                 UDim2.new(
                     0,
@@ -2156,7 +2211,37 @@ minimize.MouseButton1Click:Connect(
                     10
                 )
 
-            minimize.Text = "−"
+            minimize.BackgroundColor3 =
+                colors.soilDark
+
+            minimize.Text =
+                "−"
+
+            minimize.TextColor3 =
+                colors.text
+
+            minimize.TextSize =
+                21
+
+            minimize.Font =
+                Enum.Font.GothamBold
+
+            task.delay(
+                0.15,
+                function()
+
+                    content.Visible = true
+                    subtitle.Visible = true
+                    status.Visible = true
+                    title.Visible = true
+
+                    leafLeft.Visible = true
+                    leafRight.Visible = true
+                    grassStrip.Visible = true
+                    woodHeader.Visible = true
+
+                end
+            )
 
         end
 
