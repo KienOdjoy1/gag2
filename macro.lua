@@ -1,6 +1,6 @@
 --//==================================================
---// 🌻 KYOSH GARDEN UTILITY
---// FLOAT HEIGHT + MOBILE/CP RESPONSIVE GUI
+--// 🌱 KYOSH GARDEN UTILITY
+--// FLOAT + PERFORMANCE + TELEPORT
 --//==================================================
 
 local Players = game:GetService("Players")
@@ -12,144 +12,99 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
---==================================================
--- REMOVE OLD GUI
---==================================================
+--//==================================================
+--// REMOVE OLD GUI
+--//==================================================
 
 local oldGui = PlayerGui:FindFirstChild("GardenUtilityGUI")
-
 if oldGui then
 	oldGui:Destroy()
 end
 
---==================================================
--- GARDEN COLORS
---==================================================
+--//==================================================
+--// GARDEN COLORS
+--//==================================================
 
 local colors = {
 	soil = Color3.fromRGB(76, 50, 32),
 	soilDark = Color3.fromRGB(55, 38, 27),
-
 	grass = Color3.fromRGB(49, 82, 43),
 	grassDark = Color3.fromRGB(35, 59, 33),
-
 	leaf = Color3.fromRGB(76, 145, 70),
 	leafLight = Color3.fromRGB(105, 175, 82),
-
 	panel = Color3.fromRGB(30, 48, 28),
 	panelLight = Color3.fromRGB(40, 62, 35),
-
 	gold = Color3.fromRGB(221, 174, 74),
 	flower = Color3.fromRGB(205, 105, 130),
-
 	blue = Color3.fromRGB(76, 139, 183),
 	purple = Color3.fromRGB(120, 91, 165),
 	orange = Color3.fromRGB(183, 125, 58),
 	red = Color3.fromRGB(173, 71, 65),
-
 	text = Color3.fromRGB(242, 255, 225),
 	subtext = Color3.fromRGB(166, 194, 150),
 	off = Color3.fromRGB(57, 72, 52)
 }
 
---==================================================
--- FEATURE STATES
---==================================================
+--//==================================================
+--// FEATURE STATES
+--//==================================================
 
 local instantEEnabled = false
 local floatEnabled = false
 local antiSitEnabled = false
-
 local fpsBoostEnabled = false
 local lowGraphicsEnabled = false
 local effectsRemoved = false
 
---==================================================
--- FLOAT SETTINGS
---==================================================
-
-local floatHeight = 0.1
-local floatBaseY = nil
-local floatConnection = nil
-
---==================================================
--- TELEPORT POSITIONS
---==================================================
+--//==================================================
+--// TELEPORT POSITIONS
+--//==================================================
 
 local savedCFrame1 = nil
 local savedCFrame2 = nil
 
---==================================================
--- GUI
---==================================================
+--//==================================================
+--// FLOAT SETTINGS
+--//==================================================
+
+local floatHeight = 0
+
+--//==================================================
+--// MAIN GUI
+--//==================================================
 
 local gui = Instance.new("ScreenGui")
-
 gui.Name = "GardenUtilityGUI"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
 gui.Parent = PlayerGui
 
---==================================================
--- MOBILE DETECTION
---==================================================
-
-local isMobile = UserInputService.TouchEnabled
-	and not UserInputService.KeyboardEnabled
-
---==================================================
--- MAIN FRAME
---==================================================
+--//==================================================
+--// MAIN FRAME
+--//==================================================
 
 local main = Instance.new("Frame")
-
 main.Name = "GardenMenu"
-
 main.Size = UDim2.new(0, 340, 0, 330)
-
-main.Position = UDim2.new(
-	0.5,
-	-170,
-	0.08,
-	0
-)
-
+main.Position = UDim2.new(0.5, -170, 0.08, 0)
 main.BackgroundColor3 = colors.panel
 main.BorderSizePixel = 0
 main.Active = true
-
 main.Parent = gui
 
 local mainCorner = Instance.new("UICorner")
-
 mainCorner.CornerRadius = UDim.new(0, 18)
 mainCorner.Parent = main
 
 local mainStroke = Instance.new("UIStroke")
-
 mainStroke.Color = colors.leaf
 mainStroke.Thickness = 2
 mainStroke.Transparency = 0.15
-
 mainStroke.Parent = main
 
---==================================================
--- RESPONSIVE SCALE
---==================================================
-
-local uiScale = Instance.new("UIScale")
-uiScale.Parent = main
-
-if isMobile then
-	uiScale.Scale = 0.78
-else
-	uiScale.Scale = 1
-end
-
---==================================================
--- CUSTOM DRAG
---==================================================
+--//==================================================
+--// DRAG SYSTEM
+--//==================================================
 
 local dragging = false
 local dragStart = nil
@@ -157,349 +112,203 @@ local startPosition = nil
 local dragMoved = false
 
 local function beginDrag(input)
-
 	dragging = true
 	dragMoved = false
-
 	dragStart = input.Position
 	startPosition = main.Position
 
 	input.Changed:Connect(function()
-
 		if input.UserInputState == Enum.UserInputState.End then
 			dragging = false
 		end
-
 	end)
-
 end
 
 local function updateDrag(input)
-
 	if not dragging then
 		return
 	end
 
 	local delta = input.Position - dragStart
 
-	if math.abs(delta.X) > 5
-		or math.abs(delta.Y) > 5 then
-
+	if math.abs(delta.X) > 5 or math.abs(delta.Y) > 5 then
 		dragMoved = true
-
 	end
 
 	main.Position = UDim2.new(
 		startPosition.X.Scale,
 		startPosition.X.Offset + delta.X,
-
 		startPosition.Y.Scale,
 		startPosition.Y.Offset + delta.Y
 	)
-
 end
 
 main.InputBegan:Connect(function(input)
-
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
-
 		beginDrag(input)
-
 	end
-
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-
 	if input.UserInputType == Enum.UserInputType.MouseMovement
 		or input.UserInputType == Enum.UserInputType.Touch then
-
 		updateDrag(input)
-
 	end
-
 end)
 
---==================================================
--- HEADER
---==================================================
+--//==================================================
+--// HEADER
+--//==================================================
 
 local woodHeader = Instance.new("Frame")
-
 woodHeader.Size = UDim2.new(1, 0, 0, 67)
-woodHeader.Position = UDim2.new(0, 0, 0, 0)
-
 woodHeader.BackgroundColor3 = colors.soil
 woodHeader.BorderSizePixel = 0
-
 woodHeader.Parent = main
 
 local woodCorner = Instance.new("UICorner")
-
 woodCorner.CornerRadius = UDim.new(0, 18)
 woodCorner.Parent = woodHeader
 
 local grassStrip = Instance.new("Frame")
-
 grassStrip.Size = UDim2.new(1, 0, 0, 5)
 grassStrip.Position = UDim2.new(0, 0, 1, -5)
-
 grassStrip.BackgroundColor3 = colors.leafLight
 grassStrip.BorderSizePixel = 0
-
 grassStrip.Parent = woodHeader
 
---==================================================
--- HEADER DRAG
---==================================================
-
 woodHeader.InputBegan:Connect(function(input)
-
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
-
 		beginDrag(input)
-
 	end
-
 end)
 
---==================================================
--- HEADER DECORATIONS
---==================================================
+--//==================================================
+--// HEADER DECORATIONS
+--//==================================================
 
 local leafLeft = Instance.new("TextLabel")
-
 leafLeft.Size = UDim2.new(0, 40, 0, 35)
 leafLeft.Position = UDim2.new(0, 7, 0, 12)
-
 leafLeft.BackgroundTransparency = 1
 leafLeft.Text = "🌿"
 leafLeft.TextSize = 25
-
 leafLeft.Parent = woodHeader
 
 local leafRight = Instance.new("TextLabel")
-
 leafRight.Size = UDim2.new(0, 40, 0, 35)
 leafRight.Position = UDim2.new(1, -48, 0, 12)
-
 leafRight.BackgroundTransparency = 1
 leafRight.Text = "🌱"
 leafRight.TextSize = 24
-
 leafRight.Parent = woodHeader
 
---==================================================
--- TITLE
---==================================================
+--//==================================================
+--// TITLE
+--//==================================================
 
 local title = Instance.new("TextLabel")
-
 title.Size = UDim2.new(1, -105, 0, 28)
 title.Position = UDim2.new(0, 52, 0, 9)
-
 title.BackgroundTransparency = 1
 title.Text = "🌻 KYOSH"
-
 title.TextColor3 = colors.text
 title.TextSize = 19
 title.Font = Enum.Font.GothamBold
-
 title.TextXAlignment = Enum.TextXAlignment.Left
-
 title.Parent = woodHeader
 
 local subtitle = Instance.new("TextLabel")
-
 subtitle.Size = UDim2.new(1, -105, 0, 17)
 subtitle.Position = UDim2.new(0, 53, 0, 36)
-
 subtitle.BackgroundTransparency = 1
 subtitle.Text = "Plant • Grow • Harvest"
-
 subtitle.TextColor3 = Color3.fromRGB(207, 177, 120)
 subtitle.TextSize = 10
 subtitle.Font = Enum.Font.GothamMedium
-
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
-
 subtitle.Parent = woodHeader
 
---==================================================
--- MINIMIZE BUTTON
---==================================================
+--//==================================================
+--// MINIMIZE BUTTON
+--//==================================================
 
 local minimize = Instance.new("TextButton")
-
 minimize.Size = UDim2.new(0, 35, 0, 30)
 minimize.Position = UDim2.new(1, -47, 0, 10)
-
 minimize.BackgroundColor3 = colors.soilDark
 minimize.BorderSizePixel = 0
-
 minimize.Text = "−"
 minimize.TextColor3 = colors.text
 minimize.TextSize = 21
 minimize.Font = Enum.Font.GothamBold
-
 minimize.AutoButtonColor = false
-
 minimize.Parent = main
 
 local minimizeCorner = Instance.new("UICorner")
-
 minimizeCorner.CornerRadius = UDim.new(0, 9)
 minimizeCorner.Parent = minimize
 
 local minimizeStroke = Instance.new("UIStroke")
-
 minimizeStroke.Color = colors.leafLight
 minimizeStroke.Thickness = 1
 minimizeStroke.Transparency = 0.25
-
 minimizeStroke.Parent = minimize
 
---==================================================
--- MINIMIZE DRAG
---==================================================
-
-local minimizeDragging = false
-local minimizeDragStart = nil
-local minimizeStartPosition = nil
-local minimizeMoved = false
-
-minimize.InputBegan:Connect(function(input)
-
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-
-		minimizeDragging = true
-		minimizeMoved = false
-
-		minimizeDragStart = input.Position
-		minimizeStartPosition = main.Position
-
-		input.Changed:Connect(function()
-
-			if input.UserInputState == Enum.UserInputState.End then
-				minimizeDragging = false
-			end
-
-		end)
-
-	end
-
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-
-	if minimizeDragging
-		and (
-			input.UserInputType == Enum.UserInputType.MouseMovement
-			or input.UserInputType == Enum.UserInputType.Touch
-		) then
-
-		local delta =
-			input.Position - minimizeDragStart
-
-		if math.abs(delta.X) > 5
-			or math.abs(delta.Y) > 5 then
-
-			minimizeMoved = true
-
-		end
-
-		main.Position = UDim2.new(
-			minimizeStartPosition.X.Scale,
-			minimizeStartPosition.X.Offset + delta.X,
-
-			minimizeStartPosition.Y.Scale,
-			minimizeStartPosition.Y.Offset + delta.Y
-		)
-
-	end
-
-end)
-
---==================================================
--- STATUS
---==================================================
+--//==================================================
+--// STATUS
+--//==================================================
 
 local status = Instance.new("TextLabel")
-
 status.Size = UDim2.new(1, -30, 0, 20)
 status.Position = UDim2.new(0, 15, 1, -25)
-
 status.BackgroundTransparency = 1
-
 status.Text = "● Garden ready"
 status.TextColor3 = colors.subtext
-
 status.TextSize = 10
 status.Font = Enum.Font.Gotham
-
 status.TextXAlignment = Enum.TextXAlignment.Left
-
 status.Parent = main
 
---==================================================
--- CONTENT
---==================================================
+--//==================================================
+--// CONTENT
+--//==================================================
 
 local content = Instance.new("Frame")
-
 content.Size = UDim2.new(1, -30, 1, -105)
 content.Position = UDim2.new(0, 15, 0, 78)
-
 content.BackgroundTransparency = 1
-
 content.Parent = main
 
---==================================================
--- BUTTON FUNCTION
---==================================================
+--//==================================================
+--// BUTTON FUNCTION
+--//==================================================
 
-local function createButton(
-	parent,
-	text,
-	x,
-	y,
-	width,
-	height,
-	color
-)
+local function createButton(parent, text, x, y, width, height, color)
 
 	local button = Instance.new("TextButton")
 
 	button.Size = UDim2.new(0, width, 0, height)
 	button.Position = UDim2.new(0, x, 0, y)
-
 	button.BackgroundColor3 = color
 	button.BorderSizePixel = 0
-
 	button.Text = text
 	button.TextColor3 = colors.text
-
 	button.TextSize = 11
 	button.Font = Enum.Font.GothamBold
-
 	button.AutoButtonColor = false
-
 	button.Parent = parent
 
 	local corner = Instance.new("UICorner")
-
 	corner.CornerRadius = UDim.new(0, 11)
 	corner.Parent = button
 
 	local stroke = Instance.new("UIStroke")
-
 	stroke.Color = Color3.fromRGB(255, 255, 255)
 	stroke.Transparency = 0.88
 	stroke.Thickness = 1
-
 	stroke.Parent = button
 
 	button:SetAttribute("NormalColorR", color.R)
@@ -523,21 +332,18 @@ local function createButton(
 		local b = button:GetAttribute("NormalColorB")
 
 		if r and g and b then
-
 			button.BackgroundColor3 =
 				Color3.new(r, g, b)
-
 		end
 
 	end)
 
 	return button
-
 end
 
---==================================================
--- SET BUTTON COLOR
---==================================================
+--//==================================================
+--// BUTTON COLOR
+--//==================================================
 
 local function setButtonColor(button, color)
 
@@ -549,16 +355,7 @@ local function setButtonColor(button, color)
 
 end
 
---==================================================
--- UPDATE TOGGLE
---==================================================
-
-local function updateToggleButton(
-	button,
-	onText,
-	offText,
-	enabled
-)
+local function updateToggleButton(button, onText, offText, enabled)
 
 	if enabled then
 
@@ -574,11 +371,25 @@ local function updateToggleButton(
 
 end
 
---==================================================
--- RESIZE
---==================================================
+--//==================================================
+--// PAGE SYSTEM
+--//==================================================
 
 local minimized = false
+local currentPage = "MENU"
+
+local showMainMenu
+local showGameFeatures
+local showPerformance
+local showTeleport
+
+local function clearPage()
+
+	for _, object in ipairs(content:GetChildren()) do
+		object:Destroy()
+	end
+
+end
 
 local function resizeFrame(height)
 
@@ -588,90 +399,28 @@ local function resizeFrame(height)
 
 	TweenService:Create(
 		main,
-
 		TweenInfo.new(
 			0.22,
 			Enum.EasingStyle.Quart,
 			Enum.EasingDirection.Out
 		),
-
 		{
-			Size = UDim2.new(
-				0,
-				340,
-				0,
-				height
-			)
+			Size = UDim2.new(0, 340, 0, height)
 		}
-
 	):Play()
 
 end
 
---==================================================
--- PAGE CONTROL
---==================================================
-
-local currentPage = "MENU"
-
-local showMainMenu
-local showGameFeatures
-local showPerformance
-local showTeleport
-
---==================================================
--- CLEAR PAGE
---==================================================
-
-local function clearPage()
-
-	for _, object in ipairs(
-		content:GetChildren()
-	) do
-
-		object:Destroy()
-
-	end
-
-end
-
---==================================================
--- BACK BUTTON
---==================================================
-
-local function createBackButton()
-
-	local back = createButton(
-		content,
-		"‹  BACK TO GARDEN",
-		0,
-		0,
-		310,
-		34,
-		colors.grassDark
-	)
-
-	back.MouseButton1Click:Connect(function()
-		showMainMenu()
-	end)
-
-	return back
-
-end
-
---==================================================
--- INSTANT E
---==================================================
+--//==================================================
+--// INSTANT E
+--//==================================================
 
 local originalHoldDurations = {}
 
 local function savePromptDuration(prompt)
 
 	if originalHoldDurations[prompt] == nil then
-
-		originalHoldDurations[prompt] =
-			prompt.HoldDuration
-
+		originalHoldDurations[prompt] = prompt.HoldDuration
 	end
 
 end
@@ -688,9 +437,7 @@ local function enableInstantE()
 
 	instantEEnabled = true
 
-	for _, object in ipairs(
-		workspace:GetDescendants()
-	) do
+	for _, object in ipairs(workspace:GetDescendants()) do
 
 		if object:IsA("ProximityPrompt") then
 			makePromptInstant(object)
@@ -699,8 +446,7 @@ local function enableInstantE()
 	end
 
 	status.Text = "● Instant E enabled"
-	status.TextColor3 =
-		Color3.fromRGB(120, 220, 110)
+	status.TextColor3 = Color3.fromRGB(120, 220, 110)
 
 end
 
@@ -708,15 +454,10 @@ local function disableInstantE()
 
 	instantEEnabled = false
 
-	for prompt, duration in pairs(
-		originalHoldDurations
-	) do
+	for prompt, duration in pairs(originalHoldDurations) do
 
-		if prompt
-			and prompt.Parent then
-
+		if prompt and prompt.Parent then
 			prompt.HoldDuration = duration
-
 		end
 
 	end
@@ -726,154 +467,115 @@ local function disableInstantE()
 
 end
 
---==================================================
--- FLOAT
---==================================================
+--//==================================================
+--// FLOAT
+--//==================================================
 
-local function stopFloat()
-
-	floatEnabled = false
-	floatBaseY = nil
-
-	if floatConnection then
-
-		floatConnection:Disconnect()
-		floatConnection = nil
-
-	end
-
-end
-
-local function startFloat()
-
-	local character = player.Character
-
-	local root = character
-		and character:FindFirstChild(
-			"HumanoidRootPart"
-		)
-
-	if not root then
-
-		status.Text = "● Character not found"
-
-		status.TextColor3 =
-			Color3.fromRGB(
-				255,
-				110,
-				110
-			)
-
-		return false
-
-	end
-
-	-- Save the Y position only once
-	-- This becomes the base of the float.
-	floatBaseY = root.Position.Y
-
-	floatEnabled = true
-
-	if floatConnection then
-
-		floatConnection:Disconnect()
-		floatConnection = nil
-
-	end
-
-	floatConnection =
-		RunService.Heartbeat:Connect(function()
-
-			if not floatEnabled then
-				return
-			end
-
-			local currentCharacter =
-				player.Character
-
-			if not currentCharacter then
-				return
-			end
-
-			local currentRoot =
-				currentCharacter:FindFirstChild(
-					"HumanoidRootPart"
-				)
-
-			if not currentRoot then
-				return
-			end
-
-			if floatBaseY == nil then
-				floatBaseY = currentRoot.Position.Y
-			end
-
-			local currentPosition =
-				currentRoot.Position
-
-			local targetY =
-				floatBaseY + floatHeight
-
-			-- Remove vertical movement
-			currentRoot.AssemblyLinearVelocity =
-				Vector3.new(
-					currentRoot.AssemblyLinearVelocity.X,
-					0,
-					currentRoot.AssemblyLinearVelocity.Z
-				)
-
-			-- Keep X/Z movement but lock Y
-			currentRoot.CFrame =
-				CFrame.new(
-					currentPosition.X,
-					targetY,
-					currentPosition.Z
-				) *
-				(
-					currentRoot.CFrame
-					- currentRoot.CFrame.Position
-				)
-
-		end)
-
-	status.Text =
-		"● Float enabled • Height: "
-		.. tostring(floatHeight)
-
-	status.TextColor3 =
-		Color3.fromRGB(
-			120,
-			220,
-			110
-		)
-
-	return true
-
-end
+local floatConnection = nil
 
 local function toggleFloat()
 
+	floatEnabled = not floatEnabled
+
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+
 	if floatEnabled then
 
-		stopFloat()
+		if not root then
+
+			floatEnabled = false
+
+			status.Text = "● Character not found"
+			status.TextColor3 =
+				Color3.fromRGB(255, 110, 110)
+
+			return
+		end
+
+		-- Float height is now an OFFSET.
+		-- 0 = current height
+		-- 0.1 = 0.1 studs above
+		-- 5 = 5 studs above
+		-- 10 = 10 studs above
+
+		local baseHeight = root.Position.Y
+		local targetHeight = baseHeight + floatHeight
+
+		if floatConnection then
+			floatConnection:Disconnect()
+			floatConnection = nil
+		end
+
+		floatConnection =
+			RunService.Heartbeat:Connect(function()
+
+				if not floatEnabled then
+					return
+				end
+
+				local currentCharacter = player.Character
+
+				if not currentCharacter then
+					return
+				end
+
+				local currentRoot =
+					currentCharacter:FindFirstChild(
+						"HumanoidRootPart"
+					)
+
+				if not currentRoot then
+					return
+				end
+
+				local position = currentRoot.Position
+
+				currentRoot.AssemblyLinearVelocity =
+					Vector3.new(
+						currentRoot.AssemblyLinearVelocity.X,
+						0,
+						currentRoot.AssemblyLinearVelocity.Z
+					)
+
+				currentRoot.CFrame =
+					CFrame.new(
+						position.X,
+						targetHeight,
+						position.Z
+					) *
+					(
+						currentRoot.CFrame -
+						currentRoot.CFrame.Position
+					)
+
+			end)
 
 		status.Text =
-			"● Garden float disabled"
+			"● Float: " .. tostring(floatHeight) .. " studs"
 
 		status.TextColor3 =
-			colors.subtext
+			Color3.fromRGB(120, 220, 110)
 
 	else
 
-		startFloat()
+		if floatConnection then
+
+			floatConnection:Disconnect()
+			floatConnection = nil
+
+		end
+
+		status.Text = "● Garden float disabled"
+		status.TextColor3 = colors.subtext
 
 	end
 
 end
 
---==================================================
--- ANTI SIT
---==================================================
+--//==================================================
+--// ANTI SIT
+--//==================================================
 
 local antiSitConnection = nil
 local antiSitStateConnection = nil
@@ -881,17 +583,13 @@ local antiSitStateConnection = nil
 local function disconnectAntiSit()
 
 	if antiSitConnection then
-
 		antiSitConnection:Disconnect()
 		antiSitConnection = nil
-
 	end
 
 	if antiSitStateConnection then
-
 		antiSitStateConnection:Disconnect()
 		antiSitStateConnection = nil
-
 	end
 
 end
@@ -905,10 +603,7 @@ local function setupAntiSit(character)
 	end
 
 	local humanoid =
-		character:WaitForChild(
-			"Humanoid",
-			10
-		)
+		character:WaitForChild("Humanoid", 10)
 
 	if not humanoid then
 		return
@@ -921,19 +616,16 @@ local function setupAntiSit(character)
 				return
 			end
 
-			if not humanoid
-				or not humanoid.Parent then
-
+			if not humanoid or not humanoid.Parent then
 				return
-
 			end
 
 			if humanoid.Sit then
 				humanoid.Sit = false
 			end
 
-			if humanoid:GetState()
-				== Enum.HumanoidStateType.Seated then
+			if humanoid:GetState() ==
+				Enum.HumanoidStateType.Seated then
 
 				humanoid.Sit = false
 
@@ -979,9 +671,9 @@ local function setupAntiSit(character)
 
 end
 
---==================================================
--- PERFORMANCE STORAGE
---==================================================
+--//==================================================
+--// PERFORMANCE STORAGE
+--//==================================================
 
 local savedEffects = {}
 
@@ -992,10 +684,6 @@ local savedLighting = {
 }
 
 local lowGraphicsOriginals = {}
-
---==================================================
--- SAVE EFFECT
---==================================================
 
 local function saveEffect(object)
 
@@ -1023,9 +711,9 @@ local function saveEffect(object)
 
 end
 
---==================================================
--- FPS BOOST
---==================================================
+--//==================================================
+--// FPS BOOST
+--//==================================================
 
 local function enableFPSBoost()
 
@@ -1033,9 +721,7 @@ local function enableFPSBoost()
 
 	Lighting.GlobalShadows = false
 
-	for _, object in ipairs(
-		Lighting:GetChildren()
-	) do
+	for _, object in ipairs(Lighting:GetChildren()) do
 
 		if object:IsA("BloomEffect")
 			or object:IsA("BlurEffect")
@@ -1051,9 +737,7 @@ local function enableFPSBoost()
 
 	end
 
-	for _, object in ipairs(
-		workspace:GetDescendants()
-	) do
+	for _, object in ipairs(workspace:GetDescendants()) do
 
 		if object:IsA("ParticleEmitter")
 			or object:IsA("Trail")
@@ -1070,15 +754,9 @@ local function enableFPSBoost()
 
 	end
 
-	status.Text =
-		"● Garden FPS boost enabled"
-
+	status.Text = "● Garden FPS boost enabled"
 	status.TextColor3 =
-		Color3.fromRGB(
-			120,
-			220,
-			110
-		)
+		Color3.fromRGB(120, 220, 110)
 
 end
 
@@ -1089,39 +767,28 @@ local function disableFPSBoost()
 	Lighting.GlobalShadows =
 		savedLighting.GlobalShadows
 
-	for object, settings in pairs(
-		savedEffects
-	) do
+	for object, settings in pairs(savedEffects) do
 
-		if object
-			and object.Parent then
-
-			object.Enabled =
-				settings.Enabled
-
+		if object and object.Parent then
+			object.Enabled = settings.Enabled
 		end
 
 	end
 
-	status.Text =
-		"● Garden FPS boost disabled"
-
-	status.TextColor3 =
-		colors.subtext
+	status.Text = "● Garden FPS boost disabled"
+	status.TextColor3 = colors.subtext
 
 end
 
---==================================================
--- LOW GRAPHICS
---==================================================
+--//==================================================
+--// LOW GRAPHICS
+--//==================================================
 
 local function enableLowGraphics()
 
 	lowGraphicsEnabled = true
 
-	for _, object in ipairs(
-		workspace:GetDescendants()
-	) do
+	for _, object in ipairs(workspace:GetDescendants()) do
 
 		if object:IsA("BasePart") then
 
@@ -1143,11 +810,8 @@ local function enableLowGraphics()
 
 	end
 
-	status.Text =
-		"● Low graphics enabled"
-
-	status.TextColor3 =
-		colors.orange
+	status.Text = "● Low graphics enabled"
+	status.TextColor3 = colors.orange
 
 end
 
@@ -1155,43 +819,33 @@ local function disableLowGraphics()
 
 	lowGraphicsEnabled = false
 
-	for object, data in pairs(
-		lowGraphicsOriginals
-	) do
+	for object, data in pairs(lowGraphicsOriginals) do
 
 		if object
 			and object.Parent
 			and data then
 
-			object.Material =
-				data.Material
-
-			object.CastShadow =
-				data.CastShadow
+			object.Material = data.Material
+			object.CastShadow = data.CastShadow
 
 		end
 
 	end
 
-	status.Text =
-		"● Low graphics disabled"
-
-	status.TextColor3 =
-		colors.subtext
+	status.Text = "● Low graphics disabled"
+	status.TextColor3 = colors.subtext
 
 end
 
---==================================================
--- EFFECTS
---==================================================
+--//==================================================
+--// EFFECTS
+--//==================================================
 
 local function removeAllEffects()
 
 	effectsRemoved = true
 
-	for _, object in ipairs(
-		workspace:GetDescendants()
-	) do
+	for _, object in ipairs(workspace:GetDescendants()) do
 
 		if object:IsA("ParticleEmitter")
 			or object:IsA("Trail")
@@ -1201,16 +855,13 @@ local function removeAllEffects()
 			or object:IsA("Sparkles") then
 
 			saveEffect(object)
-
 			object.Enabled = false
 
 		end
 
 	end
 
-	for _, object in ipairs(
-		Lighting:GetChildren()
-	) do
+	for _, object in ipairs(Lighting:GetChildren()) do
 
 		if object:IsA("BloomEffect")
 			or object:IsA("BlurEffect")
@@ -1219,7 +870,6 @@ local function removeAllEffects()
 			or object:IsA("DepthOfFieldEffect") then
 
 			saveEffect(object)
-
 			object.Enabled = false
 
 		end
@@ -1235,16 +885,10 @@ local function restoreEffects()
 
 	effectsRemoved = false
 
-	for object, settings in pairs(
-		savedEffects
-	) do
+	for object, settings in pairs(savedEffects) do
 
-		if object
-			and object.Parent then
-
-			object.Enabled =
-				settings.Enabled
-
+		if object and object.Parent then
+			object.Enabled = settings.Enabled
 		end
 
 	end
@@ -1254,23 +898,17 @@ local function restoreEffects()
 
 end
 
---==================================================
--- TELEPORT
---==================================================
+--//==================================================
+--// TELEPORT FUNCTIONS
+--//==================================================
 
 local function teleportToPosition1()
 
 	if not savedCFrame1 then
 
-		status.Text =
-			"● Position 1 not saved"
-
+		status.Text = "● Position 1 not saved"
 		status.TextColor3 =
-			Color3.fromRGB(
-				255,
-				110,
-				110
-			)
+			Color3.fromRGB(255, 110, 110)
 
 		return
 	end
@@ -1282,9 +920,7 @@ local function teleportToPosition1()
 	end
 
 	local root =
-		character:FindFirstChild(
-			"HumanoidRootPart"
-		)
+		character:FindFirstChild("HumanoidRootPart")
 
 	if not root then
 		return
@@ -1298,9 +934,7 @@ local function teleportToPosition1()
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.AssemblyAngularVelocity = Vector3.zero
 
-	status.Text =
-		"● Teleported to Garden Plot 1"
-
+	status.Text = "● Teleported to Garden Plot 1"
 	status.TextColor3 = colors.blue
 
 end
@@ -1309,15 +943,9 @@ local function teleportToPosition2()
 
 	if not savedCFrame2 then
 
-		status.Text =
-			"● Position 2 not saved"
-
+		status.Text = "● Position 2 not saved"
 		status.TextColor3 =
-			Color3.fromRGB(
-				255,
-				110,
-				110
-			)
+			Color3.fromRGB(255, 110, 110)
 
 		return
 	end
@@ -1329,9 +957,7 @@ local function teleportToPosition2()
 	end
 
 	local root =
-		character:FindFirstChild(
-			"HumanoidRootPart"
-		)
+		character:FindFirstChild("HumanoidRootPart")
 
 	if not root then
 		return
@@ -1345,16 +971,230 @@ local function teleportToPosition2()
 	root.AssemblyLinearVelocity = Vector3.zero
 	root.AssemblyAngularVelocity = Vector3.zero
 
-	status.Text =
-		"● Teleported to Garden Plot 2"
-
+	status.Text = "● Teleported to Garden Plot 2"
 	status.TextColor3 = colors.blue
 
 end
 
---==================================================
--- MAIN MENU
---==================================================
+--//==================================================
+--// CIRCULAR TP BUTTONS
+--//==================================================
+
+local tpGui = Instance.new("ScreenGui")
+tpGui.Name = "GardenTPButtons"
+tpGui.ResetOnSpawn = false
+tpGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+tpGui.Parent = PlayerGui
+
+--// Create circular mobile-style button
+
+local function createTPButton(name, text, position, callback)
+
+	local button = Instance.new("TextButton")
+
+	button.Name = name
+	button.Size = UDim2.new(0, 58, 0, 58)
+	button.Position = position
+
+	-- Black like mobile/CP action buttons
+	button.BackgroundColor3 =
+		Color3.fromRGB(0, 0, 0)
+
+	button.BackgroundTransparency = 0.25
+
+	button.BorderSizePixel = 0
+
+	button.Text = text
+	button.TextColor3 =
+		Color3.fromRGB(255, 255, 255)
+
+	button.TextSize = 15
+	button.Font = Enum.Font.GothamBold
+
+	button.AutoButtonColor = false
+
+	button.Active = true
+
+	button.ZIndex = 100
+
+	button.Parent = tpGui
+
+	--// Circle
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = button
+
+	--// Border
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color =
+		Color3.fromRGB(255, 255, 255)
+
+	stroke.Transparency = 0.65
+	stroke.Thickness = 1
+	stroke.Parent = button
+
+	--// Small shadow
+
+	local shadow = Instance.new("Frame")
+	shadow.Name = "Shadow"
+	shadow.Size = UDim2.new(1, 4, 1, 4)
+	shadow.Position = UDim2.new(0, -2, 0, 2)
+	shadow.BackgroundColor3 =
+		Color3.fromRGB(0, 0, 0)
+	shadow.BackgroundTransparency = 0.6
+	shadow.BorderSizePixel = 0
+	shadow.ZIndex = 99
+	shadow.Parent = button
+
+	local shadowCorner = Instance.new("UICorner")
+	shadowCorner.CornerRadius = UDim.new(1, 0)
+	shadowCorner.Parent = shadow
+
+	--// Drag
+
+	local isDragging = false
+	local dragStart
+	local startPos
+	local moved = false
+
+	button.InputBegan:Connect(function(input)
+
+		if input.UserInputType ==
+			Enum.UserInputType.MouseButton1
+			or input.UserInputType ==
+			Enum.UserInputType.Touch then
+
+			isDragging = true
+			moved = false
+
+			dragStart = input.Position
+			startPos = button.Position
+
+			input.Changed:Connect(function()
+
+				if input.UserInputState ==
+					Enum.UserInputState.End then
+
+					isDragging = false
+
+				end
+
+			end)
+
+		end
+
+	end)
+
+	button.InputChanged:Connect(function(input)
+
+		if input.UserInputType ==
+			Enum.UserInputType.MouseMovement
+			or input.UserInputType ==
+			Enum.UserInputType.Touch then
+
+			-- handled globally below
+
+		end
+
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+
+		if not isDragging then
+			return
+		end
+
+		if input.UserInputType ==
+			Enum.UserInputType.MouseMovement
+			or input.UserInputType ==
+			Enum.UserInputType.Touch then
+
+			local delta =
+				input.Position - dragStart
+
+			if math.abs(delta.X) > 5
+				or math.abs(delta.Y) > 5 then
+
+				moved = true
+
+			end
+
+			button.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+
+		end
+
+	end)
+
+	button.MouseButton1Click:Connect(function()
+
+		-- Don't activate if the button was dragged
+		if moved then
+			moved = false
+			return
+		end
+
+		callback()
+
+	end)
+
+	return button
+
+end
+
+--// TP 1
+
+local tp1Button = createTPButton(
+	"Teleport1Button",
+	"TP 1",
+	UDim2.new(1, -140, 1, -135),
+	teleportToPosition1
+)
+
+--// TP 2
+
+local tp2Button = createTPButton(
+	"Teleport2Button",
+	"TP 2",
+	UDim2.new(1, -70, 1, -135),
+	teleportToPosition2
+)
+
+--//==================================================
+--// BACK BUTTON
+--//==================================================
+
+local function createBackButton()
+
+	local back =
+		createButton(
+			content,
+			"‹  BACK TO GARDEN",
+			0,
+			0,
+			310,
+			34,
+			colors.grassDark
+		)
+
+	back.MouseButton1Click:Connect(
+		function()
+			showMainMenu()
+		end
+	)
+
+	return back
+end
+
+--//==================================================
+--// MAIN MENU
+--//==================================================
 
 showMainMenu = function()
 
@@ -1366,23 +1206,15 @@ showMainMenu = function()
 
 	local heading = Instance.new("TextLabel")
 
-	heading.Size =
-		UDim2.new(1, 0, 0, 25)
-
-	heading.Position =
-		UDim2.new(0, 0, 0, 4)
+	heading.Size = UDim2.new(1, 0, 0, 25)
+	heading.Position = UDim2.new(0, 0, 0, 4)
 
 	heading.BackgroundTransparency = 1
 
-	heading.Text =
-		"🌱 GAG 2 - MACRO?"
+	heading.Text = "🌱 GAG 2 - MACRO?"
 
 	heading.TextColor3 =
-		Color3.fromRGB(
-			180,
-			211,
-			155
-		)
+		Color3.fromRGB(180, 211, 155)
 
 	heading.TextSize = 11
 	heading.Font = Enum.Font.GothamBold
@@ -1439,9 +1271,9 @@ showMainMenu = function()
 
 end
 
---==================================================
--- GAME FEATURES
---==================================================
+--//==================================================
+--// GAME FEATURES
+--//==================================================
 
 showGameFeatures = function()
 
@@ -1449,18 +1281,15 @@ showGameFeatures = function()
 
 	clearPage()
 
-	-- Extra space for Float Height textbox
-	resizeFrame(385)
+	resizeFrame(390)
 
 	createBackButton()
 
-	local heading = Instance.new("TextLabel")
+	local heading =
+		Instance.new("TextLabel")
 
-	heading.Size =
-		UDim2.new(1, 0, 0, 30)
-
-	heading.Position =
-		UDim2.new(0, 0, 0, 45)
+	heading.Size = UDim2.new(1, 0, 0, 30)
+	heading.Position = UDim2.new(0, 0, 0, 45)
 
 	heading.BackgroundTransparency = 1
 
@@ -1475,229 +1304,220 @@ showGameFeatures = function()
 
 	heading.Parent = content
 
-	--==================================================
-	-- INSTANT E
-	--==================================================
+	--// Instant E
 
 	local instantE =
 		createButton(
 			content,
-
 			instantEEnabled
 				and "⚡ INSTANT E: ON"
 				or "⚡ INSTANT E: OFF",
-
 			0,
 			83,
 			150,
 			45,
-
 			instantEEnabled
 				and colors.leaf
 				or colors.off
 		)
 
-	--==================================================
-	-- FLOAT
-	--==================================================
+	--// Float
 
 	local floatButton =
 		createButton(
 			content,
-
 			floatEnabled
 				and "☁ FLOAT: ON"
 				or "☁ FLOAT: OFF",
-
 			160,
 			83,
 			150,
 			45,
-
 			floatEnabled
 				and colors.leaf
 				or colors.off
 		)
 
-	--==================================================
-	-- ANTI SIT
-	--==================================================
+	--// Anti Sit
 
 	local antiSitButton =
 		createButton(
 			content,
-
 			antiSitEnabled
 				and "🪑 ANTI SIT: ON"
 				or "🪑 ANTI SIT: OFF",
-
 			0,
 			136,
 			310,
 			45,
-
 			antiSitEnabled
 				and colors.leaf
 				or colors.off
 		)
 
-	--==================================================
-	-- FLOAT HEIGHT LABEL
-	--==================================================
+	--//==================================================
+	--// FLOAT HEIGHT LABEL
+	--//==================================================
 
-	local floatLabel = Instance.new("TextLabel")
+	local heightLabel =
+		Instance.new("TextLabel")
 
-	floatLabel.Size =
-		UDim2.new(0, 310, 0, 18)
+	heightLabel.Size =
+		UDim2.new(0, 130, 0, 25)
 
-	floatLabel.Position =
-		UDim2.new(0, 0, 0, 190)
+	heightLabel.Position =
+		UDim2.new(0, 0, 0, 192)
 
-	floatLabel.BackgroundTransparency = 1
+	heightLabel.BackgroundTransparency = 1
 
-	floatLabel.Text =
-		"☁ FLOAT HEIGHT  •  0 - 10"
+	heightLabel.Text = "☁ FLOAT HEIGHT"
 
-	floatLabel.TextColor3 =
+	heightLabel.TextColor3 =
 		colors.subtext
 
-	floatLabel.TextSize = 10
-	floatLabel.Font = Enum.Font.GothamBold
+	heightLabel.TextSize = 11
 
-	floatLabel.TextXAlignment =
+	heightLabel.Font =
+		Enum.Font.GothamBold
+
+	heightLabel.TextXAlignment =
 		Enum.TextXAlignment.Left
 
-	floatLabel.Parent = content
+	heightLabel.Parent = content
 
-	--==================================================
-	-- FLOAT HEIGHT TEXTBOX
-	--==================================================
+	--//==================================================
+	--// FLOAT HEIGHT TEXTBOX
+	--//==================================================
 
-	local floatHeightBox =
+	local heightBox =
 		Instance.new("TextBox")
 
-	floatHeightBox.Size =
-		UDim2.new(0, 310, 0, 40)
+	heightBox.Size =
+		UDim2.new(0, 150, 0, 40)
 
-	floatHeightBox.Position =
-		UDim2.new(0, 0, 0, 210)
+	heightBox.Position =
+		UDim2.new(0, 160, 0, 186)
 
-	floatHeightBox.BackgroundColor3 =
-		colors.grassDark
+	heightBox.BackgroundColor3 =
+		colors.off
 
-	floatHeightBox.BorderSizePixel = 0
+	heightBox.BorderSizePixel = 0
 
-	floatHeightBox.Text =
+	heightBox.Text =
 		tostring(floatHeight)
 
-	floatHeightBox.PlaceholderText =
-		"Enter height: 0 - 10"
+	heightBox.PlaceholderText =
+		"0 - 10"
 
-	floatHeightBox.TextColor3 =
+	heightBox.PlaceholderColor3 =
+		Color3.fromRGB(140, 155, 135)
+
+	heightBox.TextColor3 =
 		colors.text
 
-	floatHeightBox.PlaceholderColor3 =
-		colors.subtext
+	heightBox.TextSize = 13
 
-	floatHeightBox.TextSize = 12
-	floatHeightBox.Font = Enum.Font.GothamBold
+	heightBox.Font =
+		Enum.Font.GothamBold
 
-	floatHeightBox.ClearTextOnFocus = false
+	heightBox.ClearTextOnFocus = false
 
-	floatHeightBox.Parent = content
+	heightBox.Parent = content
 
-	local floatHeightCorner =
+	local heightCorner =
 		Instance.new("UICorner")
 
-	floatHeightCorner.CornerRadius =
+	heightCorner.CornerRadius =
 		UDim.new(0, 10)
 
-	floatHeightCorner.Parent =
-		floatHeightBox
+	heightCorner.Parent = heightBox
 
-	local floatHeightStroke =
+	local heightStroke =
 		Instance.new("UIStroke")
 
-	floatHeightStroke.Color =
-		colors.leaf
+	heightStroke.Color =
+		colors.leafLight
 
-	floatHeightStroke.Thickness = 1
-	floatHeightStroke.Transparency = 0.3
+	heightStroke.Transparency = 0.45
 
-	floatHeightStroke.Parent =
-		floatHeightBox
+	heightStroke.Thickness = 1
 
-	--==================================================
-	-- FLOAT HEIGHT INPUT
-	--==================================================
+	heightStroke.Parent = heightBox
 
-	floatHeightBox.FocusLost:Connect(
-		function()
+	--//==================================================
+	--// FLOAT HEIGHT VALIDATION
+	--//==================================================
 
-			local value =
-				tonumber(floatHeightBox.Text)
+	local function updateFloatHeight()
 
-			-- Invalid input
-			if not value then
+		local value =
+			tonumber(heightBox.Text)
 
-				floatHeightBox.Text =
-					tostring(floatHeight)
+		if value == nil then
 
-				status.Text =
-					"● Invalid float height"
+			heightBox.Text =
+				tostring(floatHeight)
 
-				status.TextColor3 =
-					Color3.fromRGB(
-						255,
-						110,
-						110
-					)
+			status.Text =
+				"● Enter a number from 0 to 10"
 
-				return
+			status.TextColor3 =
+				Color3.fromRGB(
+					255,
+					110,
+					110
+				)
 
-			end
+			return
+		end
 
-			-- Maximum 10
-			value = math.clamp(
+		-- Clamp to 0-10
+
+		value =
+			math.clamp(
 				value,
 				0,
 				10
 			)
 
-			floatHeight = value
+		-- Keep decimal values
+		floatHeight = value
 
-			floatHeightBox.Text =
-				tostring(value)
+		heightBox.Text =
+			tostring(value)
 
-			status.Text =
-				"● Float height set to "
-				.. tostring(value)
+		status.Text =
+			"● Float height set to "
+			.. tostring(value)
 
-			status.TextColor3 =
-				Color3.fromRGB(
-					120,
-					220,
-					110
-				)
+			.. " studs"
 
+		status.TextColor3 =
+			Color3.fromRGB(
+				120,
+				220,
+				110
+			)
+
+	end
+
+	heightBox.FocusLost:Connect(
+		function()
+			updateFloatHeight()
 		end
 	)
 
-	--==================================================
-	-- INSTANT E BUTTON
-	--==================================================
+	--//==================================================
+	--// BUTTON EVENTS
+	--//==================================================
 
 	instantE.MouseButton1Click:Connect(
 		function()
 
 			if instantEEnabled then
-
 				disableInstantE()
-
 			else
-
 				enableInstantE()
-
 			end
 
 			updateToggleButton(
@@ -1709,10 +1529,6 @@ showGameFeatures = function()
 
 		end
 	)
-
-	--==================================================
-	-- FLOAT BUTTON
-	--==================================================
 
 	floatButton.MouseButton1Click:Connect(
 		function()
@@ -1729,10 +1545,6 @@ showGameFeatures = function()
 		end
 	)
 
-	--==================================================
-	-- ANTI SIT BUTTON
-	--==================================================
-
 	antiSitButton.MouseButton1Click:Connect(
 		function()
 
@@ -1742,11 +1554,9 @@ showGameFeatures = function()
 			if antiSitEnabled then
 
 				if player.Character then
-
 					setupAntiSit(
 						player.Character
 					)
-
 				end
 
 				status.Text =
@@ -1783,9 +1593,9 @@ showGameFeatures = function()
 
 end
 
---==================================================
--- PERFORMANCE
---==================================================
+--//==================================================
+--// PERFORMANCE
+--//==================================================
 
 showPerformance = function()
 
@@ -1815,7 +1625,9 @@ showPerformance = function()
 		colors.text
 
 	heading.TextSize = 16
-	heading.Font = Enum.Font.GothamBold
+
+	heading.Font =
+		Enum.Font.GothamBold
 
 	heading.TextXAlignment =
 		Enum.TextXAlignment.Left
@@ -1825,16 +1637,13 @@ showPerformance = function()
 	local fpsBoost =
 		createButton(
 			content,
-
 			fpsBoostEnabled
 				and "✓ FPS BOOST: ON"
 				or "⚡ FPS BOOST: OFF",
-
 			0,
 			83,
 			150,
 			45,
-
 			fpsBoostEnabled
 				and colors.leaf
 				or colors.off
@@ -1843,30 +1652,24 @@ showPerformance = function()
 	local normalGraphics =
 		createButton(
 			content,
-
 			"☀ NORMAL GRAPHICS",
-
 			160,
 			83,
 			150,
 			45,
-
 			colors.blue
 		)
 
 	local removeEffectsButton =
 		createButton(
 			content,
-
 			effectsRemoved
 				and "✓ EFFECTS: ON"
 				or "✦ EFFECTS: OFF",
-
 			0,
 			136,
 			150,
 			45,
-
 			effectsRemoved
 				and colors.leaf
 				or colors.off
@@ -1875,16 +1678,13 @@ showPerformance = function()
 	local lowGraphics =
 		createButton(
 			content,
-
 			lowGraphicsEnabled
 				and "✓ LOW GRAPHICS: ON"
 				or "🍂 LOW GRAPHICS: OFF",
-
 			160,
 			136,
 			150,
 			45,
-
 			lowGraphicsEnabled
 				and colors.leaf
 				or colors.off
@@ -1914,7 +1714,6 @@ showPerformance = function()
 
 			disableFPSBoost()
 			disableLowGraphics()
-			restoreEffects()
 
 			updateToggleButton(
 				fpsBoost,
@@ -1980,9 +1779,9 @@ showPerformance = function()
 
 end
 
---==================================================
--- TELEPORT
---==================================================
+--//==================================================
+--// TELEPORT PAGE
+--//==================================================
 
 showTeleport = function()
 
@@ -2012,7 +1811,9 @@ showTeleport = function()
 		colors.text
 
 	heading.TextSize = 16
-	heading.Font = Enum.Font.GothamBold
+
+	heading.Font =
+		Enum.Font.GothamBold
 
 	heading.TextXAlignment =
 		Enum.TextXAlignment.Left
@@ -2209,247 +2010,248 @@ showTeleport = function()
 
 end
 
---==================================================
--- MINIMIZE / K LOGO
---==================================================
+--//==================================================
+--// MINIMIZE
+--//==================================================
 
-local normalSize =
-	UDim2.new(
-		0,
-		340,
-		0,
-		330
-	)
+local minimizedSize =
+	UDim2.new(0, 50, 0, 50)
 
-local minimizedSize
+local minimizeDragging = false
+local minimizeDragStart = nil
+local minimizeStartPosition = nil
+local minimizeMoved = false
 
-if isMobile then
+minimize.InputBegan:Connect(function(input)
 
-	-- Smaller K on CP/mobile
-	minimizedSize =
-		UDim2.new(
-			0,
-			44,
-			0,
-			44
-		)
+	if input.UserInputType ==
+		Enum.UserInputType.MouseButton1
+		or input.UserInputType ==
+		Enum.UserInputType.Touch then
 
-else
+		minimizeDragging = true
+		minimizeMoved = false
 
-	minimizedSize =
-		UDim2.new(
-			0,
-			58,
-			0,
-			58
-		)
+		minimizeDragStart =
+			input.Position
 
-end
+		minimizeStartPosition =
+			main.Position
 
-minimize.MouseButton1Click:Connect(
-	function()
+		input.Changed:Connect(function()
 
-		-- If K was dragged,
-		-- don't toggle minimize.
-		if minimizeMoved then
+			if input.UserInputState ==
+				Enum.UserInputState.End then
 
-			minimizeMoved = false
-
-			return
-
-		end
-
-		minimized =
-			not minimized
-
-		if minimized then
-
-			content.Visible = false
-			subtitle.Visible = false
-			status.Visible = false
-
-			title.Visible = false
-
-			leafLeft.Visible = false
-			leafRight.Visible = false
-
-			grassStrip.Visible = false
-			woodHeader.Visible = false
-
-			main.BackgroundColor3 =
-				colors.soil
-
-			mainStroke.Color =
-				colors.leafLight
-
-			mainStroke.Thickness = 3
-			mainStroke.Transparency = 0
-
-			TweenService:Create(
-				main,
-
-				TweenInfo.new(
-					0.22,
-					Enum.EasingStyle.Quart,
-					Enum.EasingDirection.Out
-				),
-
-				{
-					Size = minimizedSize
-				}
-
-			):Play()
-
-			-- Smaller button on mobile
-			local logoPadding
-
-			if isMobile then
-				logoPadding = 5
-			else
-				logoPadding = 7
-			end
-
-			minimize.Size =
-				UDim2.new(
-					1,
-					-logoPadding * 2,
-					1,
-					-logoPadding * 2
-				)
-
-			minimize.Position =
-				UDim2.new(
-					0,
-					logoPadding,
-					0,
-					logoPadding
-				)
-
-			minimize.BackgroundColor3 =
-				colors.soilDark
-
-			minimize.Text = "K"
-
-			minimize.TextColor3 =
-				colors.gold
-
-			if isMobile then
-				minimize.TextSize = 19
-			else
-				minimize.TextSize = 25
-			end
-
-			minimize.Font =
-				Enum.Font.GothamBlack
-
-		else
-
-			local height
-
-			if currentPage == "TELEPORT" then
-
-				height = 365
-
-			elseif currentPage == "GAME" then
-
-				height = 385
-
-			elseif currentPage == "MENU" then
-
-				height = 330
-
-			else
-
-				height = 325
+				minimizeDragging = false
 
 			end
 
-			main.BackgroundColor3 =
-				colors.panel
-
-			mainStroke.Color =
-				colors.leaf
-
-			mainStroke.Thickness = 2
-			mainStroke.Transparency = 0.15
-
-			TweenService:Create(
-				main,
-
-				TweenInfo.new(
-					0.22,
-					Enum.EasingStyle.Quart,
-					Enum.EasingDirection.Out
-				),
-
-				{
-					Size =
-						UDim2.new(
-							0,
-							340,
-							0,
-							height
-						)
-				}
-
-			):Play()
-
-			minimize.Size =
-				UDim2.new(
-					0,
-					35,
-					0,
-					30
-				)
-
-			minimize.Position =
-				UDim2.new(
-					1,
-					-47,
-					0,
-					10
-				)
-
-			minimize.BackgroundColor3 =
-				colors.soilDark
-
-			minimize.Text = "−"
-
-			minimize.TextColor3 =
-				colors.text
-
-			minimize.TextSize = 21
-
-			minimize.Font =
-				Enum.Font.GothamBold
-
-			task.delay(
-				0.15,
-				function()
-
-					content.Visible = true
-					subtitle.Visible = true
-					status.Visible = true
-
-					title.Visible = true
-
-					leafLeft.Visible = true
-					leafRight.Visible = true
-
-					grassStrip.Visible = true
-					woodHeader.Visible = true
-
-				end
-			)
-
-		end
+		end)
 
 	end
-)
 
---==================================================
--- NEW PROXIMITY PROMPTS
---==================================================
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+	if not minimizeDragging then
+		return
+	end
+
+	if input.UserInputType ==
+		Enum.UserInputType.MouseMovement
+		or input.UserInputType ==
+		Enum.UserInputType.Touch then
+
+		local delta =
+			input.Position -
+			minimizeDragStart
+
+		if math.abs(delta.X) > 5
+			or math.abs(delta.Y) > 5 then
+
+			minimizeMoved = true
+
+		end
+
+		main.Position = UDim2.new(
+			minimizeStartPosition.X.Scale,
+			minimizeStartPosition.X.Offset + delta.X,
+			minimizeStartPosition.Y.Scale,
+			minimizeStartPosition.Y.Offset + delta.Y
+		)
+
+	end
+
+end)
+
+minimize.MouseButton1Click:Connect(function()
+
+	if minimizeMoved then
+
+		minimizeMoved = false
+
+		return
+
+	end
+
+	minimized = not minimized
+
+	if minimized then
+
+		content.Visible = false
+		subtitle.Visible = false
+		status.Visible = false
+		title.Visible = false
+		leafLeft.Visible = false
+		leafRight.Visible = false
+		grassStrip.Visible = false
+		woodHeader.Visible = false
+
+		main.BackgroundColor3 =
+			colors.soil
+
+		mainStroke.Color =
+			colors.leafLight
+
+		mainStroke.Thickness = 2
+		mainStroke.Transparency = 0
+
+		TweenService:Create(
+			main,
+			TweenInfo.new(
+				0.22,
+				Enum.EasingStyle.Quart,
+				Enum.EasingDirection.Out
+			),
+			{
+				Size = minimizedSize
+			}
+		):Play()
+
+		minimize.Size =
+			UDim2.new(
+				1,
+				-6,
+				1,
+				-6
+			)
+
+		minimize.Position =
+			UDim2.new(
+				0,
+				3,
+				0,
+				3
+			)
+
+		minimize.BackgroundColor3 =
+			colors.soilDark
+
+		minimize.Text = "K"
+
+		minimize.TextColor3 =
+			colors.gold
+
+		minimize.TextSize = 22
+
+		minimize.Font =
+			Enum.Font.GothamBlack
+
+	else
+
+		local height
+
+		if currentPage == "TELEPORT" then
+			height = 365
+		elseif currentPage == "GAME" then
+			height = 390
+		elseif currentPage == "MENU" then
+			height = 330
+		else
+			height = 325
+		end
+
+		main.BackgroundColor3 =
+			colors.panel
+
+		mainStroke.Color =
+			colors.leaf
+
+		mainStroke.Thickness = 2
+		mainStroke.Transparency = 0.15
+
+		TweenService:Create(
+			main,
+			TweenInfo.new(
+				0.22,
+				Enum.EasingStyle.Quart,
+				Enum.EasingDirection.Out
+			),
+			{
+				Size =
+					UDim2.new(
+						0,
+						340,
+						0,
+						height
+					)
+			}
+		):Play()
+
+		minimize.Size =
+			UDim2.new(
+				0,
+				35,
+				0,
+				30
+			)
+
+		minimize.Position =
+			UDim2.new(
+				1,
+				-47,
+				0,
+				10
+			)
+
+		minimize.BackgroundColor3 =
+			colors.soilDark
+
+		minimize.Text = "−"
+
+		minimize.TextColor3 =
+			colors.text
+
+		minimize.TextSize = 21
+
+		minimize.Font =
+			Enum.Font.GothamBold
+
+		task.delay(
+			0.15,
+			function()
+
+				content.Visible = true
+				subtitle.Visible = true
+				status.Visible = true
+				title.Visible = true
+				leafLeft.Visible = true
+				leafRight.Visible = true
+				grassStrip.Visible = true
+				woodHeader.Visible = true
+
+			end
+		)
+
+	end
+
+end)
+
+--//==================================================
+--// NEW PROXIMITY PROMPTS
+--//==================================================
 
 workspace.DescendantAdded:Connect(
 	function(object)
@@ -2464,44 +2266,40 @@ workspace.DescendantAdded:Connect(
 	end
 )
 
---==================================================
--- CHARACTER RESPAWN
---==================================================
+--//==================================================
+--// CHARACTER RESPAWN
+--//==================================================
 
 player.CharacterAdded:Connect(
 	function(character)
 
-		-- Float needs a new base position after respawn
-		if floatEnabled then
-
-			stopFloat()
-
-			task.wait(0.5)
-
-			if player.Character == character then
-				startFloat()
-			end
-
-		end
+		task.wait(0.5)
 
 		if antiSitEnabled then
-
 			setupAntiSit(character)
+		end
+
+		-- Re-enable float after respawn if it was enabled
+		if floatEnabled then
+
+			floatEnabled = false
+
+			if floatConnection then
+				floatConnection:Disconnect()
+				floatConnection = nil
+			end
 
 		end
 
 	end
 )
 
---==================================================
--- TELEPORT KEYBINDS
---==================================================
+--//==================================================
+--// TELEPORT KEYBINDS
+--//==================================================
 
 UserInputService.InputBegan:Connect(
-	function(
-		input,
-		gameProcessed
-	)
+	function(input, gameProcessed)
 
 		if gameProcessed then
 			return
@@ -2522,8 +2320,8 @@ UserInputService.InputBegan:Connect(
 	end
 )
 
---==================================================
--- START GUI
---==================================================
+--//==================================================
+--// START
+--//==================================================
 
 showMainMenu()
