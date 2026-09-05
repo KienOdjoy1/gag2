@@ -1,150 +1,75 @@
 --//============================================================//
---// 🛡️ KYOSH UNIVERSAL SECURE LOADER
+--// 🛡️ KYOSH UNIVERSAL LOADER
 --//============================================================//
 
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
+local PlaceId = game.PlaceId
 
-local Player = Players.LocalPlayer
+local Scripts = {
 
-local RequestFunction =
-    (syn and syn.request)
-    or (http and http.request)
-    or http_request
-    or request
-
-if not RequestFunction then
-    error("❌ HTTP request function unavailable.")
-end
-
---------------------------------------------------
---// GAME CONFIG
---------------------------------------------------
-
-local GAME_SCRIPTS = {
-
-    --// STEAL AN EGG
+    --// 🥚 STEAL AN EGG
     [107778070777162] = {
-        Name = "Steal an Egg",
-        Endpoint = "https://YOUR-DOMAIN/api/steal-an-egg"
+        "https://raw.githubusercontent.com/KienOdjoy1/gag2/refs/heads/main/eggcounter.lua",
+        "https://raw.githubusercontent.com/KienOdjoy1/gag2/refs/heads/main/saev2.lua"
     },
 
-    --// GROW A GARDEN 2
-    --// Replace this with the actual PlaceId
-    [1234567890] = {
-        Name = "Grow a Garden 2",
-        Endpoint = "https://YOUR-DOMAIN/api/grow-a-garden"
+    --// 🌱 GROW A GARDEN 2
+    [126987765280963] = {
+        "https://raw.githubusercontent.com/KienOdjoy1/gag2/refs/heads/main/wgag2.lua"
     }
 
 }
 
---------------------------------------------------
---// DETECT CURRENT GAME
---------------------------------------------------
+local SelectedScripts = Scripts[PlaceId]
 
-local PlaceId = game.PlaceId
-local GameInfo = GAME_SCRIPTS[PlaceId]
-
-if not GameInfo then
+if not SelectedScripts then
     error(
-        "❌ Unsupported game\nPlaceId: "
-        .. tostring(PlaceId)
+        "❌ KYOSH: Unsupported game\n" ..
+        "PlaceId: " .. tostring(PlaceId)
     )
 end
 
-print(
-    "🎮 Game detected:",
-    GameInfo.Name
-)
+print("🎮 KYOSH GAME DETECTED")
+print("📌 PlaceId:", PlaceId)
 
---------------------------------------------------
---// REQUEST CORRECT SCRIPT
---------------------------------------------------
+for _, URL in ipairs(SelectedScripts) do
 
-local Success, Response = pcall(function()
+    print("📡 Loading:", URL)
 
-    return RequestFunction({
+    local Success, Result = pcall(function()
+        return game:HttpGet(URL)
+    end)
 
-        Url = GameInfo.Endpoint,
+    if not Success then
+        warn("❌ Failed to download script")
+        warn(Result)
+        continue
+    end
 
-        Method = "GET",
+    if not Result or Result == "" then
+        warn("❌ Empty script received")
+        continue
+    end
 
-        Headers = {
+    local Function, CompileError =
+        loadstring(Result)
 
-            ["Content-Type"] = "application/json",
+    if not Function then
+        warn("❌ Script compilation failed")
+        warn(CompileError)
+        continue
+    end
 
-            ["X-Kyosh-Version"] = "1.0",
+    local ExecuteSuccess, ExecuteError =
+        pcall(Function)
 
-            ["X-Kyosh-Game"] =
-                tostring(PlaceId)
+    if not ExecuteSuccess then
+        warn("❌ Script execution failed")
+        warn(ExecuteError)
+    else
+        print("✅ Script loaded successfully")
+    end
 
-        }
-
-    })
-
-end)
-
-if not Success then
-
-    error(
-        "❌ Failed to contact KYOSH security server."
-    )
-
+    task.wait(0.5)
 end
 
---------------------------------------------------
---// STATUS
---------------------------------------------------
-
-local StatusCode =
-    Response.StatusCode
-    or Response.Status
-    or Response.status
-
-if StatusCode ~= 200 then
-
-    error(
-        "❌ Access denied for "
-        .. GameInfo.Name
-    )
-
-end
-
---------------------------------------------------
---// GET SCRIPT
---------------------------------------------------
-
-local Script =
-    Response.Body
-    or Response.body
-
-if not Script or Script == "" then
-
-    error(
-        "❌ Empty script received."
-    )
-
-end
-
---------------------------------------------------
---// EXECUTE
---------------------------------------------------
-
-local Function, ErrorMessage =
-    loadstring(Script)
-
-if not Function then
-
-    error(
-        "❌ Script compilation failed:\n"
-        .. tostring(ErrorMessage)
-    )
-
-end
-
-print(
-    "✅ Loading:",
-    GameInfo.Name
-)
-
-Function()
+print("🛡️ KYOSH Universal Loader finished")
