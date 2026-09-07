@@ -1,7 +1,7 @@
 --//============================================================//
 --// 🥚 EGG FPS MONITOR
---// FPS BOOST + GOD MODE + ADVANCED FLOAT + GUARD FREEZE
---// + CHAR FREEZE + BAT AUTO + FAR CAMERA + COSMIC BAT
+--// FPS BOOST + GOD MODE + ADVANCED FLOAT
+--// + BAT AUTO + FAR CAMERA + COSMIC BAT
 --//============================================================//
 
 local Players = game:GetService("Players")
@@ -24,7 +24,8 @@ if OldGUI then
 end
 
 --//============================================================//
---// GUI
+--// 🥚 KYOSH // STEAL A EGG UI
+--// MOBILE-FIRST • RESPONSIVE • MINIMIZABLE
 --//============================================================//
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -35,86 +36,148 @@ ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = PlayerGui
 
 --//============================================================//
---// MAIN
+--// MAIN WINDOW
 --//============================================================//
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.new(0,350,0,435)
-Main.Position = UDim2.new(0.5,-175,0.5,-217)
-Main.BackgroundColor3 = Color3.fromRGB(18,18,25)
+Main.Size = UDim2.new(0,370,0,380)
+Main.Position = UDim2.new(0.5,-185,0.5,-227)
+Main.BackgroundColor3 = Color3.fromRGB(13,14,19)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0,16)
+MainCorner.CornerRadius = UDim.new(0,18)
 MainCorner.Parent = Main
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(255,205,70)
-MainStroke.Thickness = 2
-MainStroke.Transparency = 0.15
+MainStroke.Thickness = 1.8
+MainStroke.Transparency = 0.08
 MainStroke.Parent = Main
+
+local MainGradient = Instance.new("UIGradient")
+MainGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,Color3.fromRGB(22,23,31)),
+    ColorSequenceKeypoint.new(1,Color3.fromRGB(10,11,15))
+})
+MainGradient.Rotation = 90
+MainGradient.Parent = Main
+
+--// Responsive scale for phones/tablets
+local UIScale = Instance.new("UIScale")
+UIScale.Scale = 1
+UIScale.Parent = Main
+
+local function UpdateResponsiveScale()
+    local Camera = workspace.CurrentCamera
+    if not Camera then return end
+
+    local Viewport = Camera.ViewportSize
+    local Scale = 1
+
+    if Viewport.X < 500 then
+        Scale = math.clamp((Viewport.X - 24) / 370,0.72,1)
+    elseif Viewport.Y < 520 then
+        Scale = math.clamp((Viewport.Y - 24) / 455,0.72,1)
+    end
+
+    UIScale.Scale = Scale
+end
+
+UpdateResponsiveScale()
+
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateResponsiveScale)
+end
 
 --//============================================================//
 --// HEADER
 --//============================================================//
 
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1,0,0,60)
-Header.BackgroundColor3 = Color3.fromRGB(28,28,37)
+Header.Size = UDim2.new(1,0,0,68)
+Header.BackgroundColor3 = Color3.fromRGB(25,26,34)
 Header.BorderSizePixel = 0
 Header.Active = true
 Header.Parent = Main
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0,16)
+HeaderCorner.CornerRadius = UDim.new(0,18)
 HeaderCorner.Parent = Header
 
+local HeaderLine = Instance.new("Frame")
+HeaderLine.Size = UDim2.new(1,-28,0,1)
+HeaderLine.Position = UDim2.new(0,14,1,-1)
+HeaderLine.BackgroundColor3 = Color3.fromRGB(255,205,70)
+HeaderLine.BackgroundTransparency = 0.55
+HeaderLine.BorderSizePixel = 0
+HeaderLine.Parent = Header
+
 local EggIcon = Instance.new("TextLabel")
-EggIcon.Size = UDim2.new(0,48,0,48)
-EggIcon.Position = UDim2.new(0,8,0,6)
+EggIcon.Size = UDim2.new(0,50,0,52)
+EggIcon.Position = UDim2.new(0,8,0,7)
 EggIcon.BackgroundTransparency = 1
 EggIcon.Text = "🥚"
-EggIcon.TextSize = 30
+EggIcon.TextSize = 31
 EggIcon.Parent = Header
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0,210,0,25)
+Title.Size = UDim2.new(1,-145,0,25)
 Title.Position = UDim2.new(0,58,0,7)
 Title.BackgroundTransparency = 1
-Title.Text = "KYOSH [SAE]"
+Title.Text = "KYOSH // STEAL A EGG"
 Title.TextColor3 = Color3.fromRGB(255,215,80)
-Title.TextSize = 18
+Title.TextSize = 17
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Header
 
 local Subtitle = Instance.new("TextLabel")
-Subtitle.Size = UDim2.new(0,210,0,18)
-Subtitle.Position = UDim2.new(0,59,0,32)
+Subtitle.Size = UDim2.new(1,-145,0,18)
+Subtitle.Position = UDim2.new(0,59,0,34)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "Performance + Protection"
-Subtitle.TextColor3 = Color3.fromRGB(155,155,165)
-Subtitle.TextSize = 11
-Subtitle.Font = Enum.Font.Gotham
+Subtitle.Text = "EGG MACRO"
+Subtitle.TextColor3 = Color3.fromRGB(145,147,158)
+Subtitle.TextSize = 10
+Subtitle.Font = Enum.Font.GothamMedium
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 Subtitle.Parent = Header
 
 --//============================================================//
---// CLOSE BUTTON
+--// MINIMIZE / CLOSE
 --//============================================================//
 
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Size = UDim2.new(0,30,0,30)
+MinimizeButton.Position = UDim2.new(1,-76,0,19)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(48,49,59)
+MinimizeButton.Text = "—"
+MinimizeButton.TextColor3 = Color3.fromRGB(255,215,80)
+MinimizeButton.TextSize = 17
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.AutoButtonColor = false
+MinimizeButton.Parent = Header
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0,9)
+MinCorner.Parent = MinimizeButton
+
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0,32,0,32)
-CloseButton.Position = UDim2.new(1,-42,0,14)
-CloseButton.BackgroundColor3 = Color3.fromRGB(48,48,58)
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0,30,0,30)
+CloseButton.Position = UDim2.new(1,-40,0,19)
+CloseButton.BackgroundColor3 = Color3.fromRGB(48,49,59)
 CloseButton.Text = "×"
-CloseButton.TextColor3 = Color3.fromRGB(255,255,255)
-CloseButton.TextSize = 21
+CloseButton.TextColor3 = Color3.fromRGB(255,115,115)
+CloseButton.TextSize = 20
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.BorderSizePixel = 0
+CloseButton.AutoButtonColor = false
 CloseButton.Parent = Header
 
 local CloseCorner = Instance.new("UICorner")
@@ -127,46 +190,44 @@ CloseCorner.Parent = CloseButton
 
 local CategoryBar = Instance.new("Frame")
 CategoryBar.Size = UDim2.new(1,-20,0,38)
-CategoryBar.Position = UDim2.new(0,10,0,70)
+CategoryBar.Position = UDim2.new(0,10,0,78)
 CategoryBar.BackgroundTransparency = 1
 CategoryBar.Parent = Main
 
-local HomeButton = Instance.new("TextButton")
-HomeButton.Size = UDim2.new(0.5,-4,1,0)
-HomeButton.BackgroundColor3 = Color3.fromRGB(35,35,45)
-HomeButton.Text = "HOME"
-HomeButton.TextColor3 = Color3.fromRGB(170,170,180)
-HomeButton.TextSize = 12
-HomeButton.Font = Enum.Font.GothamBold
-HomeButton.BorderSizePixel = 0
-HomeButton.Parent = CategoryBar
+local function MakeTab(Name,Text,Position)
+    local Button = Instance.new("TextButton")
+    Button.Name = Name
+    Button.Size = UDim2.new(0.5,-4,1,0)
+    Button.Position = Position
+    Button.BackgroundColor3 = Color3.fromRGB(32,33,43)
+    Button.Text = Text
+    Button.TextColor3 = Color3.fromRGB(160,162,174)
+    Button.TextSize = 11
+    Button.Font = Enum.Font.GothamBold
+    Button.BorderSizePixel = 0
+    Button.AutoButtonColor = false
+    Button.Parent = CategoryBar
 
-local HomeCorner = Instance.new("UICorner")
-HomeCorner.CornerRadius = UDim.new(0,9)
-HomeCorner.Parent = HomeButton
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0,10)
+    Corner.Parent = Button
 
-local FPSButton = Instance.new("TextButton")
-FPSButton.Size = UDim2.new(0.5,-4,1,0)
-FPSButton.Position = UDim2.new(0.5,4,0,0)
+    return Button
+end
+
+local HomeButton = MakeTab("HomeButton","🏠  OVERVIEW",UDim2.new(0,0,0,0))
+local FPSButton = MakeTab("FPSButton","⚡  FEATURES",UDim2.new(0.5,4,0,0))
+
 FPSButton.BackgroundColor3 = Color3.fromRGB(255,195,60)
-FPSButton.Text = "FPS"
 FPSButton.TextColor3 = Color3.fromRGB(25,25,25)
-FPSButton.TextSize = 12
-FPSButton.Font = Enum.Font.GothamBold
-FPSButton.BorderSizePixel = 0
-FPSButton.Parent = CategoryBar
-
-local FPSCorner = Instance.new("UICorner")
-FPSCorner.CornerRadius = UDim.new(0,9)
-FPSCorner.Parent = FPSButton
 
 --//============================================================//
 --// HOME PAGE
 --//============================================================//
 
 local HomePage = Instance.new("Frame")
-HomePage.Size = UDim2.new(1,-20,0,280)
-HomePage.Position = UDim2.new(0,10,0,120)
+HomePage.Size = UDim2.new(1,-20,0,315)
+HomePage.Position = UDim2.new(0,10,0,128)
 HomePage.BackgroundTransparency = 1
 HomePage.Visible = false
 HomePage.Parent = Main
@@ -174,30 +235,29 @@ HomePage.Parent = Main
 local HomeTitle = Instance.new("TextLabel")
 HomeTitle.Size = UDim2.new(1,0,0,30)
 HomeTitle.BackgroundTransparency = 1
-HomeTitle.Text = "🥚 Welcome to Kyosh [SAE]"
-HomeTitle.TextColor3 = Color3.fromRGB(230,230,235)
+HomeTitle.Text = "🥚  STEAL A EGG // READY"
+HomeTitle.TextColor3 = Color3.fromRGB(238,239,244)
 HomeTitle.TextSize = 14
 HomeTitle.Font = Enum.Font.GothamBold
 HomeTitle.TextXAlignment = Enum.TextXAlignment.Left
 HomeTitle.Parent = HomePage
 
 local HomeInfo = Instance.new("TextLabel")
-HomeInfo.Size = UDim2.new(1,0,0,180)
-HomeInfo.Position = UDim2.new(0,0,0,40)
+HomeInfo.Size = UDim2.new(1,0,0,225)
+HomeInfo.Position = UDim2.new(0,0,0,42)
 HomeInfo.BackgroundTransparency = 1
 HomeInfo.Text =
-    "Monitor your FPS and network ping in real time.\n\n" ..
-    "60+ FPS = Smooth\n" ..
-    "30–59 FPS = Moderate\n" ..
-    "Below 30 FPS = Low\n\n" ..
-    "FPS BOOST removes local visual effects.\n" ..
-    "Pets and eggs are hidden locally while FPS Boost is ON.\n" ..
-    "GOD MODE protects your Humanoid.\n" ..
-    "FLOAT follows the ground while allowing movement.\n" ..
-    "GUARD FREEZE freezes guards inside GuardAreas.\n" ..
-    "CHAR FREEZE sets NPC/Monster Humanoid speed to 0."
-
-HomeInfo.TextColor3 = Color3.fromRGB(170,170,180)
+    "KYOSH // STEAL A EGG\n\n" ..
+    "A compact control panel for performance,\n" ..
+    "protection, movement and Bat utilities.\n\n" ..
+    "🛡  GOD MODE     Protect your Humanoid\n" ..
+    "⚡  FPS BOOST    One-way visual optimization\n" ..
+    "🪽  FLOAT        Ground-follow movement\n" ..
+    "🦇  BAT AUTO     Automatic Bat interaction\n" ..
+    "📷  FAR CAMERA   Extended camera distance\n" ..
+    "🌌  COSMIC BAT   Visual Bat selector\n\n" ..
+    "● SYSTEM STATUS: ONLINE"
+HomeInfo.TextColor3 = Color3.fromRGB(164,166,177)
 HomeInfo.TextSize = 12
 HomeInfo.Font = Enum.Font.Gotham
 HomeInfo.TextXAlignment = Enum.TextXAlignment.Left
@@ -205,62 +265,78 @@ HomeInfo.TextYAlignment = Enum.TextYAlignment.Top
 HomeInfo.Parent = HomePage
 
 --//============================================================//
---// FPS PAGE
+--// FEATURES PAGE
 --//============================================================//
 
 local FPSPage = Instance.new("Frame")
-FPSPage.Size = UDim2.new(1,-20,0,280)
-FPSPage.Position = UDim2.new(0,10,0,120)
+FPSPage.Size = UDim2.new(1,-20,0,315)
+FPSPage.Position = UDim2.new(0,10,0,128)
 FPSPage.BackgroundTransparency = 1
 FPSPage.Visible = true
 FPSPage.Parent = Main
 
 local FPSBox = Instance.new("Frame")
-FPSBox.Size = UDim2.new(0.48,0,0,60)
-FPSBox.BackgroundColor3 = Color3.fromRGB(30,30,40)
+FPSBox.Size = UDim2.new(0.48,0,0,62)
+FPSBox.BackgroundColor3 = Color3.fromRGB(27,29,37)
 FPSBox.BorderSizePixel = 0
 FPSBox.Parent = FPSPage
 
 local FPSBoxCorner = Instance.new("UICorner")
-FPSBoxCorner.CornerRadius = UDim.new(0,10)
+FPSBoxCorner.CornerRadius = UDim.new(0,11)
 FPSBoxCorner.Parent = FPSBox
 
+local FPSAccent = Instance.new("Frame")
+FPSAccent.Size = UDim2.new(0,3,1,-20)
+FPSAccent.Position = UDim2.new(0,8,0,10)
+FPSAccent.BackgroundColor3 = Color3.fromRGB(100,255,130)
+FPSAccent.BorderSizePixel = 0
+FPSAccent.Parent = FPSBox
+
 local FPSLabel = Instance.new("TextLabel")
-FPSLabel.Size = UDim2.new(1,0,1,0)
+FPSLabel.Size = UDim2.new(1,-24,1,0)
+FPSLabel.Position = UDim2.new(0,18,0,0)
 FPSLabel.BackgroundTransparency = 1
 FPSLabel.Text = "FPS: --"
 FPSLabel.TextColor3 = Color3.fromRGB(100,255,130)
-FPSLabel.TextSize = 21
+FPSLabel.TextSize = 20
 FPSLabel.Font = Enum.Font.GothamBold
 FPSLabel.Parent = FPSBox
 
 local PingBox = Instance.new("Frame")
-PingBox.Size = UDim2.new(0.48,0,0,60)
+PingBox.Size = UDim2.new(0.48,0,0,62)
 PingBox.Position = UDim2.new(0.52,0,0,0)
-PingBox.BackgroundColor3 = Color3.fromRGB(30,30,40)
+PingBox.BackgroundColor3 = Color3.fromRGB(27,29,37)
 PingBox.BorderSizePixel = 0
 PingBox.Parent = FPSPage
 
 local PingCorner = Instance.new("UICorner")
-PingCorner.CornerRadius = UDim.new(0,10)
+PingCorner.CornerRadius = UDim.new(0,11)
 PingCorner.Parent = PingBox
 
+local PingAccent = Instance.new("Frame")
+PingAccent.Size = UDim2.new(0,3,1,-20)
+PingAccent.Position = UDim2.new(0,8,0,10)
+PingAccent.BackgroundColor3 = Color3.fromRGB(255,205,70)
+PingAccent.BorderSizePixel = 0
+PingAccent.Parent = PingBox
+
 local PingLabel = Instance.new("TextLabel")
-PingLabel.Size = UDim2.new(1,0,1,0)
+PingLabel.Size = UDim2.new(1,-24,1,0)
+PingLabel.Position = UDim2.new(0,18,0,0)
 PingLabel.BackgroundTransparency = 1
 PingLabel.Text = "PING: --"
-PingLabel.TextColor3 = Color3.fromRGB(100,255,130)
-PingLabel.TextSize = 21
+PingLabel.TextColor3 = Color3.fromRGB(255,215,80)
+PingLabel.TextSize = 20
 PingLabel.Font = Enum.Font.GothamBold
 PingLabel.Parent = PingBox
 
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1,0,0,22)
-StatusLabel.Position = UDim2.new(0,0,0,70)
+StatusLabel.Position = UDim2.new(0,0,0,73)
 StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "● Starting..."
-StatusLabel.TextColor3 = Color3.fromRGB(255,215,80)
-StatusLabel.TextSize = 12
+StatusLabel.Text = "● SYSTEM ONLINE"
+StatusLabel.TextColor3 = Color3.fromRGB(100,255,130)
+StatusLabel.TextSize = 11
 StatusLabel.Font = Enum.Font.GothamBold
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.Parent = FPSPage
@@ -270,270 +346,309 @@ StatusLabel.Parent = FPSPage
 --//============================================================//
 
 local function MakeButton(Name,Text,Position)
-
     local Button = Instance.new("TextButton")
-
     Button.Name = Name
-    Button.Size = UDim2.new(0.48,0,0,40)
+    Button.Size = UDim2.new(0.48,0,0,42)
     Button.Position = Position
-    Button.BackgroundColor3 = Color3.fromRGB(55,55,68)
+    Button.BackgroundColor3 = Color3.fromRGB(35,36,46)
     Button.Text = Text
     Button.TextColor3 = Color3.fromRGB(255,110,110)
-    Button.TextSize = 12
+    Button.TextSize = 11
     Button.Font = Enum.Font.GothamBold
     Button.BorderSizePixel = 0
     Button.AutoButtonColor = false
     Button.Parent = FPSPage
 
     local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0,9)
+    Corner.CornerRadius = UDim.new(0,10)
     Corner.Parent = Button
+
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(65,66,78)
+    Stroke.Thickness = 1
+    Stroke.Transparency = 0.2
+    Stroke.Parent = Button
 
     return Button
 end
 
-local GodModeButton =
-    MakeButton(
-        "GodModeButton",
-        "GOD MODE: OFF",
-        UDim2.new(0,0,0,100)
-    )
-
-local FPSBoostButton =
-    MakeButton(
-        "FPSBoostButton",
-        "FPS BOOST: OFF",
-        UDim2.new(0.52,0,0,100)
-    )
-
-local FloatButton =
-    MakeButton(
-        "FloatButton",
-        "FLOAT: OFF",
-        UDim2.new(0,0,0,148)
-    )
-
-local GuardFreezeButton =
-    MakeButton(
-        "GuardFreezeButton",
-        "FREEZE GUARDS: OFF",
-        UDim2.new(0.52,0,0,148)
-    )
-
-local BatAutoButton =
-    MakeButton(
-        "BatAutoButton",
-        "BAT AUTO: OFF",
-        UDim2.new(0,0,0,196)
-    )
-
-local AIFreezeButton =
-    MakeButton(
-        "AIFreezeButton",
-        "CHAR FREEZE: OFF",
-        UDim2.new(0.52,0,0,196)
-    )
-
-local FarCameraButton =
-    MakeButton(
-        "FarCameraButton",
-        "FAR CAMERA: OFF",
-        UDim2.new(0,0,0,244)
-    )
-
-local BatVisualButton =
-    MakeButton(
-        "BatVisualButton",
-        "BAT VISUAL: OFF",
-        UDim2.new(0.52,0,0,244)
-    )
+local GodModeButton = MakeButton("GodModeButton","🛡  GOD MODE: OFF",UDim2.new(0,0,0,102))
+local FPSBoostButton = MakeButton("FPSBoostButton","⚡  FPS BOOST: OFF",UDim2.new(0.52,0,0,102))
+local FloatButton = MakeButton("FloatButton","🪽  FLOAT: OFF",UDim2.new(0,0,0,151))
+local BatAutoButton = MakeButton("BatAutoButton","🦇  BAT AUTO: OFF",UDim2.new(0.52,0,0,151))
+local FarCameraButton = MakeButton("FarCameraButton","📷  FAR CAMERA: OFF",UDim2.new(0,0,0,200))
+local BatVisualButton = MakeButton("BatVisualButton","🌌  BAT VISUAL: OFF",UDim2.new(0.52,0,0,200))
 
 --//============================================================//
---// GOD MODE
+--// MOBILE MINIMIZED BUTTON
+--//============================================================//
+
+local MiniButton = Instance.new("TextButton")
+MiniButton.Name = "MiniButton"
+MiniButton.Size = UDim2.new(0,58,0,58)
+MiniButton.Position = UDim2.new(0,18,0.72,0)
+MiniButton.BackgroundColor3 = Color3.fromRGB(20,21,28)
+MiniButton.Text = "🥚"
+MiniButton.TextSize = 29
+MiniButton.TextColor3 = Color3.fromRGB(255,215,80)
+MiniButton.BorderSizePixel = 0
+MiniButton.AutoButtonColor = false
+MiniButton.Visible = false
+MiniButton.Active = true
+MiniButton.Parent = ScreenGui
+
+local MiniCorner = Instance.new("UICorner")
+MiniCorner.CornerRadius = UDim.new(0,17)
+MiniCorner.Parent = MiniButton
+
+local MiniStroke = Instance.new("UIStroke")
+MiniStroke.Color = Color3.fromRGB(255,205,70)
+MiniStroke.Thickness = 2
+MiniStroke.Parent = MiniButton
+
+--//============================================================//
+--// MINIMIZE / RESTORE
+--//============================================================//
+
+local function SetMinimized(State)
+    Main.Visible = not State
+    MiniButton.Visible = State
+end
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    SetMinimized(true)
+end)
+
+MiniButton.MouseButton1Click:Connect(function()
+    SetMinimized(false)
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+--//============================================================//
+--// DRAG SUPPORT — MOUSE + TOUCH
+--//============================================================//
+
+local function MakeDraggable(Object,Handle)
+    local Dragging = false
+    local DragStart = nil
+    local StartPosition = nil
+
+    Handle.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1
+        or Input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = true
+            DragStart = Input.Position
+            StartPosition = Object.Position
+
+            Input.Changed:Connect(function()
+                if Input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(Input)
+        if not Dragging then return end
+        if Input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and Input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+        local Delta = Input.Position - DragStart
+
+        Object.Position = UDim2.new(
+            StartPosition.X.Scale,
+            StartPosition.X.Offset + Delta.X,
+            StartPosition.Y.Scale,
+            StartPosition.Y.Offset + Delta.Y
+        )
+    end)
+end
+
+MakeDraggable(Main,Header)
+MakeDraggable(MiniButton,MiniButton)
+
+--//============================================================//
+--// TAB SWITCHING
+--//============================================================//
+
+local function SelectTab(Tab)
+    if Tab == "Home" then
+        HomePage.Visible = true
+        FPSPage.Visible = false
+
+        HomeButton.BackgroundColor3 = Color3.fromRGB(255,195,60)
+        HomeButton.TextColor3 = Color3.fromRGB(25,25,25)
+
+        FPSButton.BackgroundColor3 = Color3.fromRGB(32,33,43)
+        FPSButton.TextColor3 = Color3.fromRGB(160,162,174)
+    else
+        HomePage.Visible = false
+        FPSPage.Visible = true
+
+        HomeButton.BackgroundColor3 = Color3.fromRGB(32,33,43)
+        HomeButton.TextColor3 = Color3.fromRGB(160,162,174)
+
+        FPSButton.BackgroundColor3 = Color3.fromRGB(255,195,60)
+        FPSButton.TextColor3 = Color3.fromRGB(25,25,25)
+    end
+end
+
+HomeButton.MouseButton1Click:Connect(function()
+    SelectTab("Home")
+end)
+
+FPSButton.MouseButton1Click:Connect(function()
+    SelectTab("FPS")
+end)
+
+SelectTab("FPS")
+
+--//============================================================//
+--// ADVANCED GOD MODE
 --//============================================================//
 
 local GodModeEnabled = false
-local GodHealthConnection = nil
-local GodMaxHealthConnection = nil
-local GodStateConnection = nil
-local CurrentGodHumanoid = nil
 
-local function GetHumanoid()
+local ProtectHealth = true
+local ProtectDeath = true
+local ProtectRagdoll = true
+local ProtectFall = true
 
-    local Character = Player.Character
+local FALL_LIMIT = -500
+local RECOVERY_HEIGHT = 8
 
-    if not Character then
-        return nil
-    end
-
-    return Character:FindFirstChildOfClass("Humanoid")
-end
+local GodCharacter = nil
+local GodHumanoid = nil
+local GodRootPart = nil
+local LastSafeCFrame = nil
+local CharacterConnections = {}
 
 local function DisconnectGodConnections()
 
-    if GodHealthConnection then
-        GodHealthConnection:Disconnect()
-        GodHealthConnection = nil
+    for _,Connection in ipairs(CharacterConnections) do
+        pcall(function()
+            Connection:Disconnect()
+        end)
     end
 
-    if GodMaxHealthConnection then
-        GodMaxHealthConnection:Disconnect()
-        GodMaxHealthConnection = nil
-    end
-
-    if GodStateConnection then
-        GodStateConnection:Disconnect()
-        GodStateConnection = nil
-    end
+    table.clear(CharacterConnections)
 end
 
-local function ProtectHumanoid(Humanoid)
-
-    if not Humanoid then
-        return
-    end
+local function SetupGodCharacter(Character)
 
     DisconnectGodConnections()
 
-    CurrentGodHumanoid = Humanoid
+    GodCharacter = Character
+    GodHumanoid = Character:WaitForChild("Humanoid",10)
+    GodRootPart = Character:WaitForChild("HumanoidRootPart",10)
 
-    pcall(function()
-        Humanoid.Health = Humanoid.MaxHealth
-        Humanoid:SetStateEnabled(
-            Enum.HumanoidStateType.Dead,
-            false
-        )
-    end)
+    if not GodHumanoid or not GodRootPart then
+        return
+    end
 
-    GodHealthConnection =
-        Humanoid.HealthChanged:Connect(function()
+    LastSafeCFrame = GodRootPart.CFrame
 
-            if not GodModeEnabled then
-                return
-            end
-
-            if Humanoid.Parent
-                and Humanoid.Health < Humanoid.MaxHealth
-            then
-
-                task.defer(function()
-
-                    if GodModeEnabled
-                        and Humanoid.Parent
-                    then
-
-                        pcall(function()
-                            Humanoid.Health = Humanoid.MaxHealth
-                        end)
-
-                    end
-                end)
-            end
+    if GodModeEnabled and ProtectDeath then
+        pcall(function()
+            GodHumanoid:SetStateEnabled(
+                Enum.HumanoidStateType.Dead,
+                false
+            )
         end)
+    end
 
-    GodMaxHealthConnection =
-        Humanoid:GetPropertyChangedSignal(
-            "MaxHealth"
-        ):Connect(function()
+    table.insert(CharacterConnections,
+        GodHumanoid.HealthChanged:Connect(function(Health)
 
-            if not GodModeEnabled then
+            if not GodModeEnabled or not ProtectHealth then
                 return
             end
 
-            if Humanoid.Parent then
-
+            if Health < GodHumanoid.MaxHealth then
                 pcall(function()
-
-                    if Humanoid.Health < Humanoid.MaxHealth then
-                        Humanoid.Health = Humanoid.MaxHealth
-                    end
-
+                    GodHumanoid.Health = GodHumanoid.MaxHealth
                 end)
             end
         end)
+    )
 
-    GodStateConnection =
-        Humanoid.StateChanged:Connect(function(_,NewState)
+    table.insert(CharacterConnections,
+        GodHumanoid.StateChanged:Connect(function(_,State)
 
             if not GodModeEnabled then
                 return
             end
 
-            if NewState == Enum.HumanoidStateType.Dead then
+            if ProtectDeath and State == Enum.HumanoidStateType.Dead then
+                pcall(function()
+                    GodHumanoid:SetStateEnabled(
+                        Enum.HumanoidStateType.Dead,
+                        false
+                    )
+                    GodHumanoid.Health = GodHumanoid.MaxHealth
+                    GodHumanoid:ChangeState(
+                        Enum.HumanoidStateType.GettingUp
+                    )
+                end)
+            end
 
-                task.defer(function()
-
-                    if GodModeEnabled
-                        and Humanoid.Parent
-                    then
-
-                        pcall(function()
-
-                            Humanoid:SetStateEnabled(
-                                Enum.HumanoidStateType.Dead,
-                                false
-                            )
-
-                            Humanoid.Health = Humanoid.MaxHealth
-
-                            Humanoid:ChangeState(
-                                Enum.HumanoidStateType.GettingUp
-                            )
-
-                        end)
-                    end
+            if ProtectRagdoll and
+                (State == Enum.HumanoidStateType.Ragdoll or
+                 State == Enum.HumanoidStateType.FallingDown)
+            then
+                pcall(function()
+                    GodHumanoid.PlatformStand = false
+                    GodHumanoid:ChangeState(
+                        Enum.HumanoidStateType.GettingUp
+                    )
                 end)
             end
         end)
+    )
 end
 
 local function EnableGodMode()
 
     GodModeEnabled = true
 
-    local Humanoid = GetHumanoid()
-
-    if not Humanoid then
-        return
+    if Player.Character then
+        task.spawn(function()
+            SetupGodCharacter(Player.Character)
+        end)
     end
-
-    ProtectHumanoid(Humanoid)
 
     GodModeButton.Text = "GOD MODE: ON"
     GodModeButton.TextColor3 =
         Color3.fromRGB(100,255,130)
-
     GodModeButton.BackgroundColor3 =
         Color3.fromRGB(35,75,48)
-
 end
 
 local function DisableGodMode()
 
     GodModeEnabled = false
-
     DisconnectGodConnections()
 
-    if CurrentGodHumanoid
-        and CurrentGodHumanoid.Parent
-    then
-
+    if GodHumanoid and GodHumanoid.Parent then
         pcall(function()
-
-            CurrentGodHumanoid:SetStateEnabled(
+            GodHumanoid:SetStateEnabled(
                 Enum.HumanoidStateType.Dead,
                 true
             )
-
         end)
     end
 
-    CurrentGodHumanoid = nil
+    GodCharacter = nil
+    GodHumanoid = nil
+    GodRootPart = nil
+    LastSafeCFrame = nil
 
     GodModeButton.Text = "GOD MODE: OFF"
     GodModeButton.TextColor3 =
         Color3.fromRGB(255,110,110)
-
     GodModeButton.BackgroundColor3 =
         Color3.fromRGB(55,55,68)
 end
@@ -692,43 +807,26 @@ FloatButton.MouseButton1Click:Connect(function()
 end)
 
 --//============================================================//
---// FPS BOOST
+--// FPS BOOST — ONE-WAY / NO RESTORE
 --//============================================================//
 
 local FPSBoostEnabled = false
 
-local SavedParts = {}
-local SavedEffects = {}
-local SavedLighting = {}
-local SavedRenderFolders = {}
-local SavedObjectFolders = {}
-
 local RenderFolderNames = {
-
     ["ClientRenderedAssets"] = true,
     ["PlacedEggRenders"] = true,
     ["Plots"] = true,
     ["Stands"] = true,
     ["__ClientTreadmillRenders"] = true
-
 }
 
 local ObjectFolderNames = {
-
     ["AREAS"] = true,
     ["LEADERBOARDS"] = true,
     ["MACHINES"] = true
-
 }
 
-local function IsRenderFolder(Object)
-
-    return Object
-        and RenderFolderNames[Object.Name] == true
-end
-
 local function IsPlayerCharacter(Object)
-
     local Character = Player.Character
 
     if not Character then
@@ -738,226 +836,67 @@ local function IsPlayerCharacter(Object)
     return Object:IsDescendantOf(Character)
 end
 
-local function RemoveRenderFolder(Object)
-
-    if not Object
-        or not IsRenderFolder(Object)
-    then
-        return
-    end
-
-    if SavedRenderFolders[Object] then
-        return
-    end
-
-    SavedRenderFolders[Object] = {
-        Parent = Object.Parent
-    }
-
-    pcall(function()
-        Object.Parent = nil
-    end)
-end
-
-local function RemoveRenderFolders()
-
-    for _,Object in ipairs(workspace:GetDescendants()) do
-
-        if IsRenderFolder(Object) then
-            RemoveRenderFolder(Object)
-        end
-
-    end
-end
-
-local function RestoreRenderFolders()
-
-    for Object,Data in pairs(SavedRenderFolders) do
-
-        if Object
-            and Data
-            and Data.Parent
-        then
-
-            pcall(function()
-                Object.Parent = Data.Parent
-            end)
-
-        end
-    end
-
-    table.clear(SavedRenderFolders)
+local function IsRenderFolder(Object)
+    return Object
+        and RenderFolderNames[Object.Name] == true
 end
 
 local function IsObjectFolder(Object)
-
     return Object
         and Object.Parent
         and Object.Parent.Name == "__OBJECTS"
         and ObjectFolderNames[Object.Name] == true
 end
 
-local function RemoveObjectFolder(Object)
+local function RemoveRenderFolder(Object)
+    if not Object or not IsRenderFolder(Object) then
+        return
+    end
 
+    pcall(function()
+        Object:Destroy()
+    end)
+end
+
+local function RemoveRenderFolders()
+    for _,Object in ipairs(workspace:GetDescendants()) do
+        if IsRenderFolder(Object) then
+            RemoveRenderFolder(Object)
+        end
+    end
+end
+
+local function RemoveObjectFolder(Object)
     if not IsObjectFolder(Object) then
         return
     end
 
-    if SavedObjectFolders[Object] then
-        return
-    end
-
-    SavedObjectFolders[Object] = {
-        Parent = Object.Parent
-    }
-
     pcall(function()
-        Object.Parent = nil
+        Object:Destroy()
     end)
 end
 
 local function RemoveObjectFolders()
-
-    local ObjectsFolder =
-        workspace:FindFirstChild("__OBJECTS")
+    local ObjectsFolder = workspace:FindFirstChild("__OBJECTS")
 
     if not ObjectsFolder then
         return
     end
 
     for _,Object in ipairs(ObjectsFolder:GetChildren()) do
-
         if ObjectFolderNames[Object.Name] then
             RemoveObjectFolder(Object)
         end
-
     end
 end
 
-local function RestoreObjectFolders()
-
-    for Object,Data in pairs(SavedObjectFolders) do
-
-        if Object
-            and Data
-            and Data.Parent
-        then
-
-            pcall(function()
-                Object.Parent = Data.Parent
-            end)
-
-        end
-    end
-
-    table.clear(SavedObjectFolders)
-end
-
-local function HidePart(Object)
-
-    if IsPlayerCharacter(Object) then
+local function RemoveVisualObject(Object)
+    if not Object or IsPlayerCharacter(Object) then
         return
     end
 
-    if not SavedParts[Object] then
-
-        SavedParts[Object] = {
-
-            Transparency =
-                Object.LocalTransparencyModifier,
-
-            CastShadow =
-                Object.CastShadow
-
-        }
-
-    end
-
-    pcall(function()
-
-        Object.LocalTransparencyModifier = 1
-        Object.CastShadow = false
-
-    end)
-end
-
-local function HideEffect(Object)
-
-    if not SavedEffects[Object] then
-
-        if Object:IsA("Decal")
-            or Object:IsA("Texture")
-        then
-
-            SavedEffects[Object] = {
-
-                Type = "Transparency",
-                Value = Object.Transparency
-
-            }
-
-        elseif Object:IsA("PostEffect")
-            or Object:IsA("ParticleEmitter")
-            or Object:IsA("Trail")
-            or Object:IsA("Beam")
-            or Object:IsA("Fire")
-            or Object:IsA("Smoke")
-            or Object:IsA("Sparkles")
-        then
-
-            SavedEffects[Object] = {
-
-                Type = "Enabled",
-                Value = Object.Enabled
-
-            }
-
-        end
-    end
-
-    pcall(function()
-
-        if Object:IsA("Decal")
-            or Object:IsA("Texture")
-        then
-
-            Object.Transparency = 1
-
-        else
-
-            Object.Enabled = false
-
-        end
-
-    end)
-end
-
-local function ApplyBoost(Object)
-
-    if not FPSBoostEnabled then
-        return
-    end
-
-    if not Object then
-        return
-    end
-
-    if IsPlayerCharacter(Object) then
-        return
-    end
-
-    if IsRenderFolder(Object) then
-
-        RemoveRenderFolder(Object)
-        return
-
-    end
-
-    if Object:IsA("BasePart") then
-
-        HidePart(Object)
-
-    elseif Object:IsA("ParticleEmitter")
+    -- Completely remove heavy visual/effect instances locally.
+    if Object:IsA("ParticleEmitter")
         or Object:IsA("Trail")
         or Object:IsA("Beam")
         or Object:IsA("Fire")
@@ -966,630 +905,112 @@ local function ApplyBoost(Object)
         or Object:IsA("PostEffect")
         or Object:IsA("Decal")
         or Object:IsA("Texture")
+        or Object:IsA("SurfaceAppearance")
     then
-
-        HideEffect(Object)
-
-    end
-end
-
-local function ApplyLightingBoost()
-
-    local Properties = {
-
-        GlobalShadows = false,
-        ShadowSoftness = 0,
-        EnvironmentDiffuseScale = 0,
-        EnvironmentSpecularScale = 0,
-        FogEnd = 1000000
-
-    }
-
-    for Property,Value in pairs(Properties) do
-
-        if SavedLighting[Property] == nil then
-
-            local Success,OldValue =
-                pcall(function()
-                    return Lighting[Property]
-                end)
-
-            if Success then
-                SavedLighting[Property] = OldValue
-            end
-
-        end
-
         pcall(function()
-            Lighting[Property] = Value
+            Object:Destroy()
         end)
 
+        return
+    end
+
+    -- Keep world geometry from disappearing entirely, but remove
+    -- its local rendering cost and shadows. Nothing is saved.
+    if Object:IsA("BasePart") then
+        pcall(function()
+            Object.LocalTransparencyModifier = 1
+            Object.CastShadow = false
+            Object.Reflectance = 0
+        end)
     end
 end
 
-local function EnableFPSBoost()
-
+local function ApplyFPSBoost()
     FPSBoostEnabled = true
 
-    FPSBoostButton.Text = "FPS BOOST: ON"
+    FPSBoostButton.Text = "FPS BOOST: ACTIVE"
     FPSBoostButton.TextColor3 =
         Color3.fromRGB(100,255,130)
 
     FPSBoostButton.BackgroundColor3 =
         Color3.fromRGB(35,75,48)
 
-    ApplyLightingBoost()
+    -- Aggressive local lighting reduction.
+    pcall(function()
+        Lighting.GlobalShadows = false
+        Lighting.ShadowSoftness = 0
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
+        Lighting.FogEnd = 1000000
+    end)
 
+    -- Delete known heavy render/object containers locally.
     RemoveRenderFolders()
     RemoveObjectFolders()
 
+    -- Remove/hide everything that is safe to optimize locally.
     for _,Object in ipairs(workspace:GetDescendants()) do
-        ApplyBoost(Object)
-    end
-end
-
-local function DisableFPSBoost()
-
-    FPSBoostEnabled = false
-
-    FPSBoostButton.Text = "FPS BOOST: OFF"
-    FPSBoostButton.TextColor3 =
-        Color3.fromRGB(255,110,110)
-
-    FPSBoostButton.BackgroundColor3 =
-        Color3.fromRGB(55,55,68)
-
-    for Property,Value in pairs(SavedLighting) do
-
-        pcall(function()
-            Lighting[Property] = Value
-        end)
-
-    end
-
-    table.clear(SavedLighting)
-
-    for Object,Data in pairs(SavedParts) do
-
-        if Object and Object.Parent then
-
-            pcall(function()
-
-                Object.LocalTransparencyModifier =
-                    Data.Transparency
-
-                Object.CastShadow =
-                    Data.CastShadow
-
-            end)
-
+        if IsRenderFolder(Object) then
+            RemoveRenderFolder(Object)
+        elseif IsObjectFolder(Object) then
+            RemoveObjectFolder(Object)
+        else
+            RemoveVisualObject(Object)
         end
     end
 
-    table.clear(SavedParts)
-
-    for Object,Data in pairs(SavedEffects) do
-
-        if Object and Object.Parent then
-
+    -- Also remove post-processing effects currently under Lighting.
+    for _,Object in ipairs(Lighting:GetChildren()) do
+        if Object:IsA("PostEffect") then
             pcall(function()
-
-                if Data.Type == "Transparency" then
-                    Object.Transparency = Data.Value
-                else
-                    Object.Enabled = Data.Value
-                end
-
+                Object:Destroy()
             end)
-
         end
     end
 
-    table.clear(SavedEffects)
-
-    RestoreRenderFolders()
-    RestoreObjectFolders()
+    StatusLabel.Text = "● FPS BOOST ACTIVE — NO RESTORE"
+    StatusLabel.TextColor3 =
+        Color3.fromRGB(100,255,130)
 end
 
+-- FPS Boost is intentionally one-way.
+-- Clicking the button again only reapplies the boost.
 FPSBoostButton.MouseButton1Click:Connect(function()
-
-    if FPSBoostEnabled then
-        DisableFPSBoost()
-    else
-        EnableFPSBoost()
-    end
-
+    ApplyFPSBoost()
 end)
 
 --//============================================================//
---// GUARD FREEZE
---//============================================================//
-
-local GuardFreezeEnabled = false
-local FrozenGuards = {}
-local GuardFolder = nil
-
-local function GetGuardFolder()
-
-    local ObjectsFolder =
-        workspace:FindFirstChild("__OBJECTS")
-
-    if not ObjectsFolder then
-        return nil
-    end
-
-    local AreasFolder =
-        ObjectsFolder:FindFirstChild("Areas")
-
-    if not AreasFolder then
-        return nil
-    end
-
-    return AreasFolder:FindFirstChild("GuardAreas")
-end
-
-local function IsGuardModel(Model)
-
-    if not Model:IsA("Model") then
-        return false
-    end
-
-    return Model:FindFirstChildOfClass("Humanoid") ~= nil
-end
-
-local function FreezeGuard(Model)
-
-    if not IsGuardModel(Model) then
-        return
-    end
-
-    if FrozenGuards[Model] then
-        return
-    end
-
-    local Humanoid =
-        Model:FindFirstChildOfClass("Humanoid")
-
-    local Data = {
-
-        Parts = {},
-        Humanoid = Humanoid,
-
-        WalkSpeed =
-            Humanoid and Humanoid.WalkSpeed,
-
-        JumpPower =
-            Humanoid and Humanoid.JumpPower,
-
-        JumpHeight =
-            Humanoid and Humanoid.JumpHeight,
-
-        AutoRotate =
-            Humanoid and Humanoid.AutoRotate
-
-    }
-
-    if Humanoid then
-
-        pcall(function()
-
-            Humanoid.WalkSpeed = 0
-            Humanoid.JumpPower = 0
-            Humanoid.JumpHeight = 0
-            Humanoid.AutoRotate = false
-
-        end)
-    end
-
-    for _,Object in ipairs(Model:GetDescendants()) do
-
-        if Object:IsA("BasePart") then
-
-            Data.Parts[Object] =
-                Object.Anchored
-
-            pcall(function()
-                Object.Anchored = true
-            end)
-
-        end
-    end
-
-    FrozenGuards[Model] = Data
-end
-
-local function UnfreezeGuard(Model,Data)
-
-    if not Data then
-        return
-    end
-
-    for Object,OldAnchored in pairs(Data.Parts) do
-
-        if Object and Object.Parent then
-
-            pcall(function()
-                Object.Anchored = OldAnchored
-            end)
-
-        end
-    end
-
-    if Data.Humanoid
-        and Data.Humanoid.Parent
-    then
-
-        pcall(function()
-
-            Data.Humanoid.WalkSpeed =
-                Data.WalkSpeed
-
-            Data.Humanoid.JumpPower =
-                Data.JumpPower
-
-            Data.Humanoid.JumpHeight =
-                Data.JumpHeight
-
-            Data.Humanoid.AutoRotate =
-                Data.AutoRotate
-
-        end)
-    end
-end
-
-local function FreezeAllGuards()
-
-    GuardFolder = GetGuardFolder()
-
-    if not GuardFolder then
-        return
-    end
-
-    for _,Object in ipairs(GuardFolder:GetDescendants()) do
-
-        if Object:IsA("Model")
-            and IsGuardModel(Object)
-        then
-
-            FreezeGuard(Object)
-
-        end
-    end
-end
-
-local function UnfreezeAllGuards()
-
-    for Model,Data in pairs(FrozenGuards) do
-        UnfreezeGuard(Model,Data)
-    end
-
-    table.clear(FrozenGuards)
-end
-
-GuardFreezeButton.MouseButton1Click:Connect(function()
-
-    if GuardFreezeEnabled then
-
-        GuardFreezeEnabled = false
-
-        UnfreezeAllGuards()
-
-        GuardFreezeButton.Text =
-            "FREEZE GUARDS: OFF"
-
-        GuardFreezeButton.TextColor3 =
-            Color3.fromRGB(255,110,110)
-
-        GuardFreezeButton.BackgroundColor3 =
-            Color3.fromRGB(55,55,68)
-
-    else
-
-        GuardFreezeEnabled = true
-
-        FreezeAllGuards()
-
-        GuardFreezeButton.Text =
-            "FREEZE GUARDS: ON"
-
-        GuardFreezeButton.TextColor3 =
-            Color3.fromRGB(100,255,130)
-
-        GuardFreezeButton.BackgroundColor3 =
-            Color3.fromRGB(35,75,48)
-
-    end
-end)
-
---//============================================================//
---// AI / MONSTER FREEZE
---//============================================================//
-
-local AIFreezeEnabled = false
-local FrozenAI = {}
-
-local function IsPlayerModel(Model)
-
-    if not Model then
-        return false
-    end
-
-    for _,OtherPlayer in ipairs(Players:GetPlayers()) do
-
-        if OtherPlayer.Character
-            and Model:IsDescendantOf(
-                OtherPlayer.Character
-            )
-        then
-
-            return true
-
-        end
-    end
-
-    return false
-end
-
-local function IsAIModel(Model)
-
-    if not Model
-        or not Model:IsA("Model")
-    then
-        return false
-    end
-
-    if IsPlayerModel(Model) then
-        return false
-    end
-
-    return Model:FindFirstChildOfClass("Humanoid") ~= nil
-end
-
-local function FreezeAI(Model)
-
-    if not IsAIModel(Model) then
-        return
-    end
-
-    local Humanoid =
-        Model:FindFirstChildOfClass("Humanoid")
-
-    if not Humanoid then
-        return
-    end
-
-    if FrozenAI[Model] then
-        return
-    end
-
-    FrozenAI[Model] = {
-
-        Humanoid = Humanoid,
-
-        WalkSpeed =
-            Humanoid.WalkSpeed,
-
-        JumpPower =
-            Humanoid.JumpPower,
-
-        JumpHeight =
-            Humanoid.JumpHeight,
-
-        AutoRotate =
-            Humanoid.AutoRotate
-
-    }
-
-    pcall(function()
-
-        Humanoid.WalkSpeed = 0
-        Humanoid.JumpPower = 0
-        Humanoid.JumpHeight = 0
-        Humanoid.AutoRotate = false
-
-    end)
-end
-
-local function UnfreezeAI(Model,Data)
-
-    if not Data then
-        return
-    end
-
-    local Humanoid = Data.Humanoid
-
-    if not Humanoid
-        or not Humanoid.Parent
-    then
-        return
-    end
-
-    pcall(function()
-
-        Humanoid.WalkSpeed =
-            Data.WalkSpeed
-
-        Humanoid.JumpPower =
-            Data.JumpPower
-
-        Humanoid.JumpHeight =
-            Data.JumpHeight
-
-        Humanoid.AutoRotate =
-            Data.AutoRotate
-
-    end)
-end
-
-local function FreezeAllAI()
-
-    for _,Object in ipairs(workspace:GetDescendants()) do
-
-        if Object:IsA("Model")
-            and IsAIModel(Object)
-        then
-
-            FreezeAI(Object)
-
-        end
-    end
-end
-
-local function UnfreezeAllAI()
-
-    for Model,Data in pairs(FrozenAI) do
-        UnfreezeAI(Model,Data)
-    end
-
-    table.clear(FrozenAI)
-end
-
-AIFreezeButton.MouseButton1Click:Connect(function()
-
-    if AIFreezeEnabled then
-
-        AIFreezeEnabled = false
-
-        UnfreezeAllAI()
-
-        AIFreezeButton.Text =
-            "CHAR FREEZE: OFF"
-
-        AIFreezeButton.TextColor3 =
-            Color3.fromRGB(255,110,110)
-
-        AIFreezeButton.BackgroundColor3 =
-            Color3.fromRGB(55,55,68)
-
-    else
-
-        AIFreezeEnabled = true
-
-        FreezeAllAI()
-
-        AIFreezeButton.Text =
-            "CHAR FREEZE: ON"
-
-        AIFreezeButton.TextColor3 =
-            Color3.fromRGB(100,255,130)
-
-        AIFreezeButton.BackgroundColor3 =
-            Color3.fromRGB(35,75,48)
-
-    end
-end)
-
---//============================================================//
---// NEW AI DETECTION
+--// FPS BOOST — NEW OBJECT DETECTION
 --//============================================================//
 
 workspace.DescendantAdded:Connect(function(Object)
-
-    if not AIFreezeEnabled then
-        return
-    end
-
-    task.defer(function()
-
-        local Model =
-            Object:FindFirstAncestorOfClass("Model")
-
-        if Model
-            and IsAIModel(Model)
-        then
-
-            FreezeAI(Model)
-
-        end
-    end)
-end)
-
---//============================================================//
---// NEW GUARDS
---//============================================================//
-
-workspace.DescendantAdded:Connect(function(Object)
-
-    if not GuardFreezeEnabled then
-        return
-    end
-
-    local Folder = GetGuardFolder()
-
-    if not Folder then
-        return
-    end
-
-    if not Object:IsDescendantOf(Folder) then
-        return
-    end
-
-    task.defer(function()
-
-        local Model =
-            Object:FindFirstAncestorOfClass("Model")
-
-        if Model
-            and IsGuardModel(Model)
-            and Model:IsDescendantOf(Folder)
-        then
-
-            FreezeGuard(Model)
-
-        end
-    end)
-end)
-
---//============================================================//
---// FPS BOOST NEW OBJECT DETECTION
---//============================================================//
-
-workspace.DescendantAdded:Connect(function(Object)
-
     if not FPSBoostEnabled then
         return
     end
 
     task.defer(function()
-
-        if not FPSBoostEnabled then
+        if not FPSBoostEnabled or not Object.Parent then
             return
         end
 
-        if IsRenderFolder(Object) then
-
-            RemoveRenderFolder(Object)
-            return
-
-        end
-
-        if IsObjectFolder(Object) then
-
-            RemoveObjectFolder(Object)
-            return
-
-        end
-
-        --// Check ancestors manually
+        -- Check the object and its ancestors for known render containers.
         local Current = Object
 
-        while Current
-            and Current ~= workspace
-        do
-
+        while Current and Current ~= workspace do
             if IsRenderFolder(Current) then
-
                 RemoveRenderFolder(Current)
                 return
+            end
 
+            if IsObjectFolder(Current) then
+                RemoveObjectFolder(Current)
+                return
             end
 
             Current = Current.Parent
-
         end
 
-        ApplyBoost(Object)
-
+        RemoveVisualObject(Object)
     end)
 end)
 
@@ -2258,67 +1679,42 @@ Player.CharacterAdded:Connect(function(Character)
     task.wait(0.75)
 
     if GodModeEnabled then
-
-        local Humanoid =
-            Character:FindFirstChildOfClass(
-                "Humanoid"
-            )
-
-        if not Humanoid then
-
-            Humanoid =
-                Character:WaitForChild(
-                    "Humanoid",
-                    5
-                )
-
-        end
-
-        if Humanoid
-            and GodModeEnabled
-        then
-
-            ProtectHumanoid(Humanoid)
-
-        end
+        task.spawn(function()
+            SetupGodCharacter(Character)
+        end)
+    else
+        GodCharacter = Character
+        GodHumanoid = nil
+        GodRootPart = nil
+        LastSafeCFrame = nil
     end
 
     if FloatEnabled then
-
         task.wait(0.15)
         StartFloat()
-
     end
 
     if FarCameraEnabled then
-
         task.wait(0.1)
         StartFarCamera()
-
     end
 
     if BatVisualEnabled
         and BatVisualIndex == 7
     then
-
         task.spawn(function()
-
             for i = 1,20 do
-
                 if not ScreenGui.Parent then
                     break
                 end
 
                 if ApplyBatVisual("Cosmic Bat") then
-
                     BatVisualButton.Text =
                         "BAT: Cosmic Bat"
-
                     break
                 end
 
                 task.wait(0.5)
-
             end
         end)
     end
@@ -2336,125 +1732,64 @@ task.spawn(function()
 
         if GodModeEnabled then
 
-            local Humanoid =
-                GetHumanoid()
-
-            if Humanoid then
-
-                if Humanoid ~= CurrentGodHumanoid then
-                    ProtectHumanoid(Humanoid)
-                end
-
-                pcall(function()
-
-                    Humanoid:SetStateEnabled(
-                        Enum.HumanoidStateType.Dead,
-                        false
-                    )
-
-                    if Humanoid.Health <
-                        Humanoid.MaxHealth
-                    then
-
-                        Humanoid.Health =
-                            Humanoid.MaxHealth
-
-                    end
-
-                end)
-            end
-        end
-    end
-end)
-
---//============================================================//
---// GUARD FREEZE SAFETY
---//============================================================//
-
-task.spawn(function()
-
-    while ScreenGui.Parent do
-
-        task.wait(0.5)
-
-        if GuardFreezeEnabled then
-
-            local Folder =
-                GetGuardFolder()
-
-            if Folder then
-
-                for Model,Data in pairs(FrozenGuards) do
-
-                    if Model
-                        and Model.Parent
-                        and IsGuardModel(Model)
-                    then
-
-                        for Part in pairs(Data.Parts) do
-
-                            if Part
-                                and Part.Parent
-                            then
-
-                                pcall(function()
-                                    Part.Anchored = true
-                                end)
-
-                            end
-                        end
-
-                    else
-
-                        FrozenGuards[Model] = nil
-
-                    end
+            if not GodCharacter
+                or not GodHumanoid
+                or not GodRootPart
+                or not GodCharacter.Parent
+            then
+                local Character = Player.Character
+                if Character then
+                    task.spawn(function()
+                        SetupGodCharacter(Character)
+                    end)
                 end
             end
-        end
-    end
-end)
 
---//============================================================//
---// CHAR FREEZE SAFETY
---//============================================================//
+            if GodHumanoid and GodRootPart and GodCharacter and GodCharacter.Parent then
 
-task.spawn(function()
-
-    while ScreenGui.Parent do
-
-        task.wait(0.25)
-
-        if AIFreezeEnabled then
-
-            for Model,Data in pairs(FrozenAI) do
-
-                if Model
-                    and Model.Parent
-                    and IsAIModel(Model)
+                if ProtectHealth and
+                    GodHumanoid.Health < GodHumanoid.MaxHealth
                 then
+                    pcall(function()
+                        GodHumanoid.Health = GodHumanoid.MaxHealth
+                    end)
+                end
 
-                    local Humanoid =
-                        Data.Humanoid
+                if ProtectDeath then
+                    pcall(function()
+                        GodHumanoid:SetStateEnabled(
+                            Enum.HumanoidStateType.Dead,
+                            false
+                        )
+                    end)
+                end
 
-                    if Humanoid
-                        and Humanoid.Parent
-                    then
+                if ProtectRagdoll and GodHumanoid.PlatformStand then
+                    pcall(function()
+                        GodHumanoid.PlatformStand = false
+                    end)
+                end
 
-                        pcall(function()
+                local State = GodHumanoid:GetState()
 
-                            Humanoid.WalkSpeed = 0
-                            Humanoid.JumpPower = 0
-                            Humanoid.JumpHeight = 0
-                            Humanoid.AutoRotate = false
+                if State ~= Enum.HumanoidStateType.Freefall
+                    and State ~= Enum.HumanoidStateType.FallingDown
+                    and State ~= Enum.HumanoidStateType.Ragdoll
+                    and GodRootPart.Position.Y > FALL_LIMIT + 50
+                then
+                    LastSafeCFrame = GodRootPart.CFrame
+                end
 
-                        end)
-                    end
-
-                else
-
-                    FrozenAI[Model] = nil
-
+                if ProtectFall and
+                    GodRootPart.Position.Y <= FALL_LIMIT and
+                    LastSafeCFrame
+                then
+                    pcall(function()
+                        GodRootPart.AssemblyLinearVelocity = Vector3.zero
+                        GodRootPart.AssemblyAngularVelocity = Vector3.zero
+                        GodRootPart.CFrame =
+                            LastSafeCFrame + Vector3.new(0,RECOVERY_HEIGHT,0)
+                    end)
                 end
             end
         end
@@ -2462,187 +1797,9 @@ task.spawn(function()
 end)
 
 --//============================================================//
---// OPEN BUTTON
+--// MOBILE UI
+--// Minimize/restore is handled by MiniButton above.
 --//============================================================//
-
-local OpenButton = Instance.new("TextButton")
-
-OpenButton.Size =
-    UDim2.new(0,58,0,58)
-
-OpenButton.Position =
-    UDim2.new(0,20,0.5,-29)
-
-OpenButton.BackgroundColor3 =
-    Color3.fromRGB(25,25,33)
-
-OpenButton.Text = "🥚"
-OpenButton.TextSize = 29
-OpenButton.TextColor3 =
-    Color3.fromRGB(255,255,255)
-
-OpenButton.BorderSizePixel = 0
-OpenButton.Visible = false
-OpenButton.Active = true
-OpenButton.Parent = ScreenGui
-
-local OpenCorner =
-    Instance.new("UICorner")
-
-OpenCorner.CornerRadius =
-    UDim.new(1,0)
-
-OpenCorner.Parent =
-    OpenButton
-
-local OpenStroke =
-    Instance.new("UIStroke")
-
-OpenStroke.Color =
-    Color3.fromRGB(255,205,70)
-
-OpenStroke.Thickness = 2
-OpenStroke.Parent = OpenButton
-
-CloseButton.MouseButton1Click:Connect(function()
-
-    Main.Visible = false
-    OpenButton.Visible = true
-
-end)
-
-OpenButton.MouseButton1Click:Connect(function()
-
-    Main.Visible = true
-    OpenButton.Visible = false
-
-end)
-
---//============================================================//
---// DRAG MAIN
---//============================================================//
-
-local MainDragging = false
-local MainDragStart
-local MainStartPosition
-local MainDragInput
-
-Header.InputBegan:Connect(function(Input)
-
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-
-        or Input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        MainDragging = true
-
-        MainDragStart =
-            Input.Position
-
-        MainStartPosition =
-            Main.Position
-
-        MainDragInput =
-            Input
-
-    end
-end)
-
-Header.InputChanged:Connect(function(Input)
-
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseMovement
-
-        or Input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        MainDragInput =
-            Input
-
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(Input)
-
-    if MainDragging
-        and Input == MainDragInput
-    then
-
-        local Delta =
-            Input.Position -
-            MainDragStart
-
-        Main.Position =
-            UDim2.new(
-
-                MainStartPosition.X.Scale,
-                MainStartPosition.X.Offset + Delta.X,
-
-                MainStartPosition.Y.Scale,
-                MainStartPosition.Y.Offset + Delta.Y
-
-            )
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(Input)
-
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-
-        or Input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        MainDragging = false
-
-    end
-end)
-
---//============================================================//
---// PAGE SWITCHING
---//============================================================//
-
-HomeButton.MouseButton1Click:Connect(function()
-
-    HomePage.Visible = true
-    FPSPage.Visible = false
-
-    HomeButton.BackgroundColor3 =
-        Color3.fromRGB(255,195,60)
-
-    HomeButton.TextColor3 =
-        Color3.fromRGB(25,25,25)
-
-    FPSButton.BackgroundColor3 =
-        Color3.fromRGB(35,35,45)
-
-    FPSButton.TextColor3 =
-        Color3.fromRGB(170,170,180)
-
-end)
-
-FPSButton.MouseButton1Click:Connect(function()
-
-    HomePage.Visible = false
-    FPSPage.Visible = true
-
-    FPSButton.BackgroundColor3 =
-        Color3.fromRGB(255,195,60)
-
-    FPSButton.TextColor3 =
-        Color3.fromRGB(25,25,25)
-
-    HomeButton.BackgroundColor3 =
-        Color3.fromRGB(35,35,45)
-
-    HomeButton.TextColor3 =
-        Color3.fromRGB(170,170,180)
-
-end)
 
 --//============================================================//
 --// FPS MONITOR
@@ -2770,42 +1927,12 @@ task.spawn(function()
     --// FPS BOOST
     task.wait(0.15)
 
-    EnableFPSBoost()
+    ApplyFPSBoost()
 
     --// FLOAT
     task.wait(0.15)
 
     EnableFloat()
-
-    --// GUARD FREEZE
-    task.wait(0.15)
-
-    GuardFreezeEnabled = true
-    FreezeAllGuards()
-
-    GuardFreezeButton.Text =
-        "FREEZE GUARDS: ON"
-
-    GuardFreezeButton.TextColor3 =
-        Color3.fromRGB(100,255,130)
-
-    GuardFreezeButton.BackgroundColor3 =
-        Color3.fromRGB(35,75,48)
-
-    --// CHAR FREEZE
-    task.wait(0.15)
-
-    AIFreezeEnabled = true
-    FreezeAllAI()
-
-    AIFreezeButton.Text =
-        "CHAR FREEZE: ON"
-
-    AIFreezeButton.TextColor3 =
-        Color3.fromRGB(100,255,130)
-
-    AIFreezeButton.BackgroundColor3 =
-        Color3.fromRGB(35,75,48)
 
     --// BAT AUTO
     task.wait(0.15)
@@ -2876,7 +2003,7 @@ task.spawn(function()
     task.wait(0.25)
 
     StatusLabel.Text =
-        "● ALL FEATURES ENABLED"
+        "● ALL FEATURES ENABLED • FPS BOOST NO RESTORE"
 
     StatusLabel.TextColor3 =
         Color3.fromRGB(100,255,130)
@@ -2897,13 +2024,7 @@ task.spawn(function()
         "✓ FLOAT"
     )
 
-    print(
-        "✓ GUARD FREEZE"
-    )
 
-    print(
-        "✓ CHAR FREEZE"
-    )
 
     print(
         "✓ BAT AUTO"
@@ -2930,19 +2051,6 @@ ScreenGui.Destroying:Connect(function()
 
     GodModeEnabled = false
     DisconnectGodConnections()
-
-    GuardFreezeEnabled = false
-    UnfreezeAllGuards()
-
-    AIFreezeEnabled = false
-    UnfreezeAllAI()
-
-    if FPSBoostEnabled then
-        DisableFPSBoost()
-    end
-
-    RestoreRenderFolders()
-    RestoreObjectFolders()
 
     BatAutoEnabled = false
 
@@ -2979,7 +2087,7 @@ end)
 --//============================================================//
 
 print(
-    "🥚 EGG FPS MONITOR LOADED - AUTO START ENABLED"
+    "🥚 EGG FPS MONITOR LOADED - FPS BOOST ACTIVE"
 )
 
 print(
