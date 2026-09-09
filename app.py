@@ -1,5 +1,4 @@
 import os
-import json
 import time
 import threading
 from flask import Flask, request, jsonify
@@ -16,11 +15,14 @@ accounts = {}
 state_lock = threading.Lock()
 discord_message_id = None
 
+
 def check_key(req):
     return req.headers.get("X-API-Key") == API_KEY
 
+
 def dashboard_text():
     now = time.time()
+
     with state_lock:
         items = list(accounts.values())
 
@@ -28,8 +30,9 @@ def dashboard_text():
     online = 0
     offline = 0
 
-    for a in sorted(items, key=lambda x: (x.get("playerName") or "").lower()):
-        is_online = (now - a.get("lastSeen", 0)) <= HEARTBEAT_TIMEOUT
+    for account in sorted(items, key=lambda x: (x.get("playerName") or "").lower()):
+        is_online = (now - account.get("lastSeen", 0)) <= HEARTBEAT_TIMEOUT
+
         if is_online:
             online += 1
             icon = "🟢 ONLINE"
@@ -37,8 +40,8 @@ def dashboard_text():
             offline += 1
             icon = "🔴 OFFLINE"
 
-        name = a.get("playerName") or str(a.get("userId"))
-        eggs = a.get("eggs", 0)
+        name = account.get("playerName") or account.get("userId")
+        eggs = int(account.get("eggs", 0))
         lines.append(f"{icon} **{name}** — 🥚 **{eggs:,}**")
 
     if not lines:
@@ -46,14 +49,15 @@ def dashboard_text():
     else:
         body = "\n".join(lines)
 
-    # Discord embed description limit is 4096 characters.
     if len(body) > 3900:
         body = body[:3860] + "\n…more accounts not shown"
 
     return body, online, offline, len(items)
 
+
 def discord_payload():
     body, online, offline, total = dashboard_text()
+
     return {
         "embeds": [{
             "title": "🥚 KYOSH ACCOUNT MONITOR",
@@ -66,47 +70,87 @@ def discord_payload():
         }]
     }
 
+
 def update_discord():
     global discord_message_id
 
     if not DISCORD_WEBHOOK_URL:
+        print("❌ DISCORD_WEBHOOK_URL is empty")
         return
 
     payload = discord_payload()
 
+    print("💬 Updating Discord...")
+    print(f"   Accounts: {len(accounts)}")
+    print(f"   Existing message ID: {discord_message_id}")
+
     try:
+        # Edit the existing monitor message.
         if discord_message_id:
             url = f"{DISCORD_WEBHOOK_URL}/messages/{discord_message_id}"
-            r = requests.patch(url, json=payload, timeout=15)
-            if r.status_code == 404:
-                discord_message_id = None
-            elif not (200 <= r.status_code < 300):
-                print("Discord PATCH error:", r.status_code, r.text[:300])
+
+            response = requests.patch(
+                url,
+                json=payload,
+                timeout=15
+            )
+
+            print(f"   Discord PATCH status: {response.status_code}")
+
+            if 200 <= response.status_code < 300:
+                print("✅ Discord message updated")
                 return
 
-        if not discord_message_id:
-            url = DISCORD_WEBHOOK_URL + "?wait=true"
-            r = requests.post(url, json=payload, timeout=15)
-            if 200 <= r.status_code < 300:
-                data = r.json()
-                discord_message_id = data.get("id")
-                print("Created Discord monitor message:", discord_message_id)
+            if response.status_code == 404:
+                print("⚠️ Existing Discord message was not found. Creating a new one...")
+                discord_message_id = None
             else:
-                print("Discord POST error:", r.status_code, r.text[:300])
-    except Exception as e:
-        print("Discord update error:", e)
+                print("❌ Discord PATCH error:")
+                print(response.text[:1000])
+                return
+
+        # Create the first monitor message.
+        url = DISCORD_WEBHOOK_URL + "?wait=true"
+
+        response = requests.post(
+            url,
+            json=payload,
+            timeout=15
+        )
+
+        print(f"   Discord POST status: {response.status_code}")
+
+        if 200 <= response.status_code < 300:
+            data = response.json()
+            discord_message_id = data.get("id")
+
+            print("✅ Discord monitor message created")
+            print(f"   Message ID: {discord_message_id}")
+        else:
+            print("❌ Discord POST error:")
+            print(response.text[:1000])
+
+    except Exception as error:
+        print("❌ Discord connection error:")
+        print(repr(error))
+
 
 def monitor_loop():
+    print("🚀 Discord monitor loop started")
+
     while True:
         try:
             update_discord()
-        except Exception as e:
-            print("Monitor loop error:", e)
+        except Exception as error:
+            print("❌ Monitor loop error:", repr(error))
+
         time.sleep(DISCORD_UPDATE_INTERVAL)
+
 
 @app.get("/")
 def home():
     body, online, offline, total = dashboard_text()
+
     return f"""<!doctype html>
 <html>
 <head>
@@ -114,10 +158,27 @@ def home():
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kyosh Account Monitor</title>
 <style>
-body{{font-family:Arial,sans-serif;background:#111;color:#eee;max-width:900px;margin:40px auto;padding:20px}}
-.card{{background:#1d1d1d;border-radius:14px;padding:20px}}
-pre{{white-space:pre-wrap;font-size:18px;line-height:1.7}}
-.small{{color:#aaa}}
+body {{
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 20px;
+}}
+.card {{
+    background: #1d1d1d;
+    border-radius: 14px;
+    padding: 20px;
+}}
+pre {{
+    white-space: pre-wrap;
+    font-size: 18px;
+    line-height: 1.7;
+}}
+.small {{
+    color: #aaa;
+}}
 </style>
 </head>
 <body>
@@ -129,33 +190,53 @@ pre{{white-space:pre-wrap;font-size:18px;line-height:1.7}}
 </body>
 </html>"""
 
+
 @app.get("/health")
 def health():
-    return jsonify({"ok": True, "accounts": len(accounts)})
+    return jsonify({
+        "ok": True,
+        "accounts": len(accounts),
+        "discord_message_id_exists": discord_message_id is not None
+    })
+
 
 @app.post("/heartbeat")
 def heartbeat():
     if not check_key(request):
+        print("❌ Unauthorized heartbeat request")
         return jsonify({"ok": False, "error": "Unauthorized"}), 401
 
     data = request.get_json(silent=True) or {}
+
     user_id = str(data.get("userId", "")).strip()
+
     if not user_id:
+        print("❌ Heartbeat missing userId")
         return jsonify({"ok": False, "error": "Missing userId"}), 400
 
+    player_name = str(data.get("playerName") or user_id)
+    display_name = str(data.get("displayName") or "")
+    eggs = int(data.get("eggs", 0))
+
     with state_lock:
-        old = accounts.get(user_id, {})
         accounts[user_id] = {
             "userId": user_id,
-            "playerName": str(data.get("playerName") or old.get("playerName") or user_id),
-            "displayName": str(data.get("displayName") or old.get("displayName") or ""),
-            "eggs": int(data.get("eggs", old.get("eggs", 0))),
+            "playerName": player_name,
+            "displayName": display_name,
+            "eggs": eggs,
             "lastSeen": time.time()
         }
 
+    print(f"📡 Heartbeat received: {player_name} | 🥚 Eggs: {eggs}")
+
     return jsonify({"ok": True})
 
-threading.Thread(target=monitor_loop, daemon=True).start()
+
+threading.Thread(
+    target=monitor_loop,
+    daemon=True
+).start()
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "10000"))
