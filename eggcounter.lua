@@ -15,21 +15,30 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 --------------------------------------------------
---// DISCORD WEBHOOK
+--------------------------------------------------
+--// 🥚 KYOSH EGG + ACCOUNT MONITOR
+--// Sends heartbeat + egg count to ONE monitor server.
+--// The monitor server keeps ONE Discord message.
 --------------------------------------------------
 
--- IMPORTANT:
--- Your old webhook was exposed. Create a NEW webhook
--- and paste it here.
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1543291508223123467/e-F7h7fpeNSvu75P6J7TQWtFyW7oTf2EW36YDpcjx18HIKh3Of3m_XqiavR4WC3rCQ2a"
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
 --------------------------------------------------
---// SETTINGS
+--// MONITOR SERVER SETTINGS
 --------------------------------------------------
 
-local DISCORD_UPDATE_INTERVAL = 10
+-- Put your PUBLIC monitor-server URL here.
+-- Example: https://your-server.example.com
+local MONITOR_URL = "https://gag2-1.onrender.com"
 
--- How often the inventory is rescanned.
+-- Must match API_KEY in monitor_server.py
+local MONITOR_API_KEY = "KYOSH-12162006"
+
+local HEARTBEAT_INTERVAL = 10
 local INVENTORY_SCAN_INTERVAL = 0.5
 
 --------------------------------------------------
@@ -42,17 +51,61 @@ local RequestFunction =
     or http_request
     or request
 
+local function SendMonitorRequest(Data)
+    if not RequestFunction then
+        warn("❌ HTTP request function unavailable")
+        return false, "No request function"
+    end
+
+    if MONITOR_URL == ""
+        or MONITOR_URL == "PASTE_YOUR_MONITOR_URL_HERE" then
+        warn("❌ MONITOR_URL is not configured")
+        return false, "No monitor URL"
+    end
+
+    local Success, Result = pcall(function()
+        return RequestFunction({
+            Url = MONITOR_URL .. "/heartbeat",
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["X-API-Key"] = MONITOR_API_KEY
+            },
+            Body = HttpService:JSONEncode(Data)
+        })
+    end)
+
+    if not Success then
+        return false, Result
+    end
+
+    return true, Result
+end
+
 --------------------------------------------------
---// VARIABLES
+--// MONITOR STATE
 --------------------------------------------------
 
-local DiscordMessageID = nil
 local CurrentEggCount = 0
 
---------------------------------------------------
---// REMOVE OLD GUI
---------------------------------------------------
+local function SendHeartbeat(EggCount)
+    CurrentEggCount = tonumber(EggCount) or 0
 
+    local Success, Result = SendMonitorRequest({
+        userId = tostring(Player.UserId),
+        playerName = Player.Name,
+        displayName = Player.DisplayName,
+        eggs = CurrentEggCount,
+        timestamp = os.time()
+    })
+
+    if not Success then
+        warn("⚠️ Monitor heartbeat failed:", Result)
+        return false
+    end
+
+    return true
+end
 local old = PlayerGui:FindFirstChild("KyoshEggCounter")
 
 if old then
@@ -383,311 +436,24 @@ local function GetTotalEggs()
 end
 
 --------------------------------------------------
---// CREATE DISCORD EMBED
---------------------------------------------------
-
-local function CreateDiscordData(EggCount)
-
-    return {
-
-        username = "KYOSH Egg Counter",
-
-        embeds = {{
-
-            title =
-                "🥚 KYOSH EGG COUNTER",
-
-            description =
-                "Latest egg inventory status.",
-
-            color = 0x9B59B6,
-
-            fields = {
-
-                {
-                    name = "🥚 Egg Count",
-
-                    value =
-                        "**"
-                        .. tostring(EggCount)
-                        .. "**",
-
-                    inline = true
-                },
-
-                {
-                    name = "👤 Player",
-
-                    value =
-                        Player.Name,
-
-                    inline = true
-                },
-
-                {
-                    name = "📦 Source",
-
-                    value =
-                        "Main Inventory",
-
-                    inline = false
-                },
-
-                {
-                    name = "🔄 Update",
-
-                    value =
-                        "**LIVE**",
-
-                    inline = false
-                }
-            },
-
-            footer = {
-
-                text =
-                    "KYOSH Egg Counter • Live Status"
-            },
-
-            timestamp =
-                DateTime.now():ToIsoDate()
-        }}
-    }
-end
-
---------------------------------------------------
---// REQUEST HELPER
---------------------------------------------------
-
-local function SendRequest(Options)
-
-    if not RequestFunction then
-
-        return false,
-            "HTTP request function unavailable"
-    end
-
-    local Success, Result =
-        pcall(function()
-
-            return RequestFunction(Options)
-
-        end)
-
-    if not Success then
-
-        return false, Result
-    end
-
-    return true, Result
-end
-
---------------------------------------------------
---// CREATE FIRST DISCORD MESSAGE
---------------------------------------------------
-
-local function CreateDiscordMessage(EggCount)
-
-    if WEBHOOK_URL == ""
-        or WEBHOOK_URL ==
-            "PASTE_YOUR_NEW_WEBHOOK_HERE" then
-
-        warn(
-            "❌ Discord webhook URL is not configured"
-        )
-
-        return false
-    end
-
-    local Data =
-        CreateDiscordData(EggCount)
-
-    local CreateURL =
-        WEBHOOK_URL
-
-    if not string.find(
-        CreateURL,
-        "?",
-        1,
-        true
-    ) then
-
-        CreateURL =
-            CreateURL
-            .. "?wait=true"
-
-    else
-
-        CreateURL =
-            CreateURL
-            .. "&wait=true"
-    end
-
-    local Success, Result =
-        SendRequest({
-
-            Url = CreateURL,
-
-            Method = "POST",
-
-            Headers = {
-
-                ["Content-Type"] =
-                    "application/json"
-            },
-
-            Body =
-                HttpService:JSONEncode(
-                    Data
-                )
-        })
-
-    if not Success then
-
-        warn(
-            "❌ Discord create failed:",
-            Result
-        )
-
-        return false
-    end
-
-    --------------------------------------------------
-    --// READ RESPONSE
-    --------------------------------------------------
-
-    local Body = nil
-
-    if type(Result) == "table" then
-
-        Body =
-            Result.Body
-            or Result.body
-    end
-
-    if Body and Body ~= "" then
-
-        local DecodeSuccess, Decoded =
-            pcall(function()
-
-                return HttpService:JSONDecode(
-                    Body
-                )
-
-            end)
-
-        if DecodeSuccess
-            and Decoded
-            and Decoded.id then
-
-            DiscordMessageID =
-                tostring(
-                    Decoded.id
-                )
-
-            print(
-                "✅ Discord message created | ID:",
-                DiscordMessageID
-            )
-
-            return true
-        end
-    end
-
-    warn(
-        "⚠️ Discord message sent, but message ID was not returned"
-    )
-
-    return false
-end
-
---------------------------------------------------
---// UPDATE EXISTING DISCORD MESSAGE
---------------------------------------------------
-
-local function UpdateDiscordMessage(EggCount)
-
-    if not DiscordMessageID then
-
-        warn(
-            "⚠️ No Discord message ID"
-        )
-
-        return false
-    end
-
-    local Data =
-        CreateDiscordData(EggCount)
-
-    local EditURL =
-        WEBHOOK_URL
-        .. "/messages/"
-        .. tostring(
-            DiscordMessageID
-        )
-
-    local Success, Result =
-        SendRequest({
-
-            Url = EditURL,
-
-            Method = "PATCH",
-
-            Headers = {
-
-                ["Content-Type"] =
-                    "application/json"
-            },
-
-            Body =
-                HttpService:JSONEncode(
-                    Data
-                )
-        })
-
-    if not Success then
-
-        warn(
-            "❌ Discord update failed:",
-            Result
-        )
-
-        return false
-    end
-
-    print(
-        "🔄 Discord message updated | Eggs:",
-        EggCount
-    )
-
-    return true
-end
-
 --------------------------------------------------
 --// UPDATE GUI
 --------------------------------------------------
 
 local function UpdateGUI()
+    local Total = GetTotalEggs()
 
-    local Total =
-        GetTotalEggs()
-
-    CurrentEggCount =
-        Total
-
-    Count.Text =
-        tostring(Total)
+    CurrentEggCount = Total
+    Count.Text = tostring(Total)
 
     return Total
 end
 
 --------------------------------------------------
---// IMPORTANT:
---// WAIT UNTIL INVENTORY UI REALLY EXISTS
+--// INVENTORY UI DETECTION
 --------------------------------------------------
 
 task.spawn(function()
-
     local Inventory = nil
     local Attempts = 0
 
@@ -695,197 +461,79 @@ task.spawn(function()
         and not Inventory
         and Attempts < 120 do
 
-        Inventory =
-            GetInventory()
+        Inventory = GetInventory()
 
         if not Inventory then
-
             task.wait(0.25)
-
             Attempts += 1
-
         end
     end
 
     if Inventory then
-
-        print(
-            "✅ Inventory UI detected:",
-            Inventory:GetFullName()
-        )
-
+        print("✅ Inventory UI detected:", Inventory:GetFullName())
     else
-
-        warn(
-            "⚠️ Inventory UI was not detected"
-        )
+        warn("⚠️ Inventory UI was not detected")
     end
 end)
 
 --------------------------------------------------
 --// REJOIN / INVENTORY LOAD SCANNER
 --------------------------------------------------
---//
---// This does NOT stop after the first non-zero
---// count.
---//
---// It continuously rescans while the inventory
---// is being populated after joining.
---------------------------------------------------
 
 task.spawn(function()
-
     local LastCount = -1
     local StableScans = 0
 
     while Gui.Parent do
+        task.wait(INVENTORY_SCAN_INTERVAL)
 
-        task.wait(
-            INVENTORY_SCAN_INTERVAL
-        )
-
-        local Success, Total =
-            pcall(function()
-
-                return GetTotalEggs()
-
-            end)
+        local Success, Total = pcall(function()
+            return GetTotalEggs()
+        end)
 
         if Success and type(Total) == "number" then
-
-            CurrentEggCount =
-                Total
-
-            Count.Text =
-                tostring(Total)
-
-            --------------------------------------------------
-            --// Detect inventory changes
-            --------------------------------------------------
+            CurrentEggCount = Total
+            Count.Text = tostring(Total)
 
             if Total ~= LastCount then
-
-                print(
-                    "🥚 Inventory changed:",
-                    LastCount,
-                    "→",
-                    Total
-                )
-
-                LastCount =
-                    Total
-
+                print("🥚 Inventory changed:", LastCount, "→", Total)
+                LastCount = Total
                 StableScans = 0
-
             else
-
                 StableScans += 1
             end
-
         end
     end
 end)
 
 --------------------------------------------------
---// EXTRA INITIAL LOAD RESCAN
---------------------------------------------------
---//
---// After joining, the UI can populate gradually.
---// Rescan for 15 seconds instead of stopping at
---// the first egg count.
+--// INITIAL LOAD + FIRST HEARTBEAT
 --------------------------------------------------
 
 task.spawn(function()
-
-    local StartTime =
-        os.clock()
-
-    while Gui.Parent
-        and os.clock() - StartTime < 15 do
-
-        task.wait(0.25)
-
-        pcall(function()
-
-            UpdateGUI()
-
-        end)
-    end
-end)
-
---------------------------------------------------
---// CREATE DISCORD MESSAGE
---------------------------------------------------
-
-task.spawn(function()
-
-    --------------------------------------------------
-    --// WAIT FOR INVENTORY TO LOAD
-    --------------------------------------------------
-
     local Inventory = nil
-
     local Attempts = 0
 
-    while not Inventory
-        and Attempts < 80 do
-
-        Inventory =
-            GetInventory()
+    while not Inventory and Attempts < 80 do
+        Inventory = GetInventory()
 
         if not Inventory then
-
             task.wait(0.25)
-
             Attempts += 1
-
         end
     end
-
-    --------------------------------------------------
-    --// GIVE THE GAME TIME TO POPULATE SLOTS
-    --------------------------------------------------
 
     task.wait(2)
 
-    --------------------------------------------------
-    --// FINAL INITIAL SCAN
-    --------------------------------------------------
+    local Total = GetTotalEggs()
 
-    local Total =
-        GetTotalEggs()
+    CurrentEggCount = Total
+    Count.Text = tostring(Total)
 
-    CurrentEggCount =
-        Total
+    print("📦 Initial egg count:", Total)
 
-    Count.Text =
-        tostring(Total)
-
-    print(
-        "📦 Initial egg count:",
-        Total
-    )
-
-    --------------------------------------------------
-    --// CREATE ONE MESSAGE
-    --------------------------------------------------
-
-    local Created =
-        CreateDiscordMessage(
-            Total
-        )
-
-    if Created then
-
-        print(
-            "📡 Single Discord status message active"
-        )
-
-    else
-
-        warn(
-            "❌ Could not create Discord status message"
-        )
+    if SendHeartbeat(Total) then
+        print("📡 Account monitor heartbeat started")
     end
 end)
 
@@ -894,77 +542,34 @@ end)
 --------------------------------------------------
 
 task.spawn(function()
-
     while Gui.Parent do
-
         task.wait(0.25)
 
         pcall(function()
-
             UpdateGUI()
-
         end)
     end
 end)
 
 --------------------------------------------------
---// DISCORD LIVE UPDATE
+--// ACCOUNT HEARTBEAT
 --------------------------------------------------
 
 task.spawn(function()
-
-    --------------------------------------------------
-    --// WAIT FOR MESSAGE CREATION
-    --------------------------------------------------
-
-    local Timeout = 0
-
-    while Gui.Parent
-        and not DiscordMessageID
-        and Timeout < 120 do
-
-        task.wait(1)
-
-        Timeout += 1
-    end
-
-    if not DiscordMessageID then
-
-        warn(
-            "❌ Discord message ID was never received"
-        )
-
-        return
-    end
-
-    --------------------------------------------------
-    --// UPDATE SAME MESSAGE FOREVER
-    --------------------------------------------------
-
     while Gui.Parent do
+        task.wait(HEARTBEAT_INTERVAL)
 
-        task.wait(
-            DISCORD_UPDATE_INTERVAL
-        )
+        local Success, Total = pcall(function()
+            return GetTotalEggs()
+        end)
 
-        local Success, Total =
-            pcall(function()
-
-                return GetTotalEggs()
-
-            end)
-
-        if Success then
-
-            CurrentEggCount =
-                Total
-
-            Count.Text =
-                tostring(Total)
-
-            UpdateDiscordMessage(
-                Total
-            )
+        if Success and type(Total) == "number" then
+            CurrentEggCount = Total
+            Count.Text = tostring(Total)
+            SendHeartbeat(Total)
+        else
+            -- Still send a heartbeat using the last known count.
+            SendHeartbeat(CurrentEggCount)
         end
     end
 end)
@@ -973,26 +578,7 @@ end)
 --// LOADED
 --------------------------------------------------
 
-print(
-    "🥚 KYOSH EGG COUNTER LOADED"
-)
-
-print(
-    "📦 Inventory + Hotbar 1-10"
-)
-
-print(
-    "🔄 Rejoin Inventory Scanner ENABLED"
-)
-
-print(
-    "📡 Discord Single Message Mode"
-)
-
-print(
-    "🔄 Live Discord Updates"
-)
-
-print(
-    "⏱️ Discord Update Interval: 10 Seconds"
-)
+print("🥚 KYOSH EGG COUNTER + ACCOUNT MONITOR LOADED")
+print("📦 Inventory + Hotbar 1-10")
+print("🟢 Heartbeat interval:", HEARTBEAT_INTERVAL, "seconds")
+print("📡 Discord is handled by the external monitor server")
