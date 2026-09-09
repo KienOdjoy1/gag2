@@ -6,6 +6,7 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -345,16 +346,17 @@ StatusLabel.Parent = FPSPage
 --// BUTTON HELPER
 --//============================================================//
 
-local function MakeButton(Name,Text,Position)
+local function MakeButton(Name,Text,Position,IsToggle)
     local Button = Instance.new("TextButton")
     Button.Name = Name
     Button.Size = UDim2.new(0.48,0,0,42)
     Button.Position = Position
     Button.BackgroundColor3 = Color3.fromRGB(35,36,46)
     Button.Text = Text
-    Button.TextColor3 = Color3.fromRGB(255,110,110)
+    Button.TextColor3 = Color3.fromRGB(238,239,244)
     Button.TextSize = 11
     Button.Font = Enum.Font.GothamBold
+    Button.TextXAlignment = Enum.TextXAlignment.Left
     Button.BorderSizePixel = 0
     Button.AutoButtonColor = false
     Button.Parent = FPSPage
@@ -369,15 +371,103 @@ local function MakeButton(Name,Text,Position)
     Stroke.Transparency = 0.2
     Stroke.Parent = Button
 
+    if IsToggle then
+        Button.Text = Text
+        Button.TextXAlignment = Enum.TextXAlignment.Left
+
+        local ToggleTrack = Instance.new("Frame")
+        ToggleTrack.Name = "ToggleTrack"
+        ToggleTrack.Size = UDim2.new(0,62,0,30)
+        ToggleTrack.Position = UDim2.new(1,-70,0.5,-15)
+        ToggleTrack.BackgroundColor3 = Color3.fromRGB(18,19,25)
+        ToggleTrack.BorderSizePixel = 0
+        ToggleTrack.Parent = Button
+
+        local TrackCorner = Instance.new("UICorner")
+        TrackCorner.CornerRadius = UDim.new(1,0)
+        TrackCorner.Parent = ToggleTrack
+
+        local TrackStroke = Instance.new("UIStroke")
+        TrackStroke.Name = "ToggleStroke"
+        TrackStroke.Color = Color3.fromRGB(255,205,35)
+        TrackStroke.Thickness = 1.5
+        TrackStroke.Transparency = 0
+        TrackStroke.Parent = ToggleTrack
+
+        local ToggleKnob = Instance.new("Frame")
+        ToggleKnob.Name = "ToggleKnob"
+        ToggleKnob.Size = UDim2.new(0,24,0,24)
+        ToggleKnob.Position = UDim2.new(0,3,0.5,-12)
+        ToggleKnob.BackgroundColor3 = Color3.fromRGB(248,248,245)
+        ToggleKnob.BorderSizePixel = 0
+        ToggleKnob.Parent = ToggleTrack
+
+        local KnobCorner = Instance.new("UICorner")
+        KnobCorner.CornerRadius = UDim.new(1,0)
+        KnobCorner.Parent = ToggleKnob
+
+        local KnobStroke = Instance.new("UIStroke")
+        KnobStroke.Color = Color3.fromRGB(255,220,120)
+        KnobStroke.Thickness = 1
+        KnobStroke.Transparency = 0.15
+        KnobStroke.Parent = ToggleKnob
+
+        local ToggleGlow = Instance.new("UIGradient")
+        ToggleGlow.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,Color3.fromRGB(255,255,255)),
+            ColorSequenceKeypoint.new(1,Color3.fromRGB(225,225,220))
+        })
+        ToggleGlow.Rotation = 90
+        ToggleGlow.Parent = ToggleKnob
+    end
+
     return Button
 end
 
-local GodModeButton = MakeButton("GodModeButton","🛡  GOD MODE: OFF",UDim2.new(0,0,0,102))
-local FPSBoostButton = MakeButton("FPSBoostButton","⚡  FPS BOOST: OFF",UDim2.new(0.52,0,0,102))
-local FloatButton = MakeButton("FloatButton","🪽  FLOAT: OFF",UDim2.new(0,0,0,151))
-local BatAutoButton = MakeButton("BatAutoButton","🦇  BAT AUTO: OFF",UDim2.new(0.52,0,0,151))
-local FarCameraButton = MakeButton("FarCameraButton","📷  FAR CAMERA: OFF",UDim2.new(0,0,0,200))
-local BatVisualButton = MakeButton("BatVisualButton","🌌  BAT VISUAL: OFF",UDim2.new(0.52,0,0,200))
+local function SetToggleVisual(Button,Enabled)
+    local ToggleTrack = Button:FindFirstChild("ToggleTrack")
+    local ToggleKnob = ToggleTrack and ToggleTrack:FindFirstChild("ToggleKnob")
+    local ToggleStroke = ToggleTrack and ToggleTrack:FindFirstChild("ToggleStroke")
+
+    if not ToggleTrack or not ToggleKnob then
+        return
+    end
+
+    local TargetPosition
+    if Enabled then
+        TargetPosition = UDim2.new(1,-27,0.5,-12)
+    else
+        TargetPosition = UDim2.new(0,3,0.5,-12)
+    end
+
+    TweenService:Create(
+        ToggleKnob,
+        TweenInfo.new(0.16,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+        {Position = TargetPosition}
+    ):Play()
+
+    ToggleTrack.BackgroundColor3 =
+        Enabled and Color3.fromRGB(28,31,24) or Color3.fromRGB(18,19,25)
+
+    if ToggleStroke then
+        ToggleStroke.Color =
+            Enabled and Color3.fromRGB(255,205,35) or Color3.fromRGB(150,125,35)
+        ToggleStroke.Thickness = Enabled and 1.8 or 1.5
+    end
+end
+
+local GodModeButton = MakeButton("GodModeButton","  GOD MODE",UDim2.new(0,0,0,102),true)
+local FPSBoostButton = MakeButton("FPSBoostButton","  FPS BOOST",UDim2.new(0.52,0,0,102),true)
+local FloatButton = MakeButton("FloatButton","  FLOAT",UDim2.new(0,0,0,151),true)
+local BatAutoButton = MakeButton("BatAutoButton","  BAT AUTO",UDim2.new(0.52,0,0,151),true)
+local FarCameraButton = MakeButton("FarCameraButton","  FAR CAMERA",UDim2.new(0,0,0,200),true)
+local BatVisualButton = MakeButton("BatVisualButton","  BAT VISUAL: OFF",UDim2.new(0.52,0,0,200))
+
+SetToggleVisual(GodModeButton,false)
+SetToggleVisual(FPSBoostButton,false)
+SetToggleVisual(FloatButton,false)
+SetToggleVisual(BatAutoButton,false)
+SetToggleVisual(FarCameraButton,false)
 
 --//============================================================//
 --// MOBILE MINIMIZED BUTTON
@@ -620,11 +710,12 @@ local function EnableGodMode()
         end)
     end
 
-    GodModeButton.Text = "GOD MODE: ON"
+    GodModeButton.Text = "  GOD MODE"
     GodModeButton.TextColor3 =
         Color3.fromRGB(100,255,130)
     GodModeButton.BackgroundColor3 =
-        Color3.fromRGB(35,75,48)
+        Color3.fromRGB(35,36,46)
+    SetToggleVisual(GodModeButton,true)
 end
 
 local function DisableGodMode()
@@ -646,11 +737,12 @@ local function DisableGodMode()
     GodRootPart = nil
     LastSafeCFrame = nil
 
-    GodModeButton.Text = "GOD MODE: OFF"
+    GodModeButton.Text = "  GOD MODE"
     GodModeButton.TextColor3 =
-        Color3.fromRGB(255,110,110)
+        Color3.fromRGB(238,239,244)
     GodModeButton.BackgroundColor3 =
-        Color3.fromRGB(55,55,68)
+        Color3.fromRGB(35,36,46)
+    SetToggleVisual(GodModeButton,false)
 end
 
 GodModeButton.MouseButton1Click:Connect(function()
@@ -772,12 +864,13 @@ local function EnableFloat()
 
     FloatEnabled = true
 
-    FloatButton.Text = "FLOAT: ON"
+    FloatButton.Text = "  FLOAT"
     FloatButton.TextColor3 =
         Color3.fromRGB(100,255,130)
 
     FloatButton.BackgroundColor3 =
-        Color3.fromRGB(35,75,48)
+        Color3.fromRGB(35,36,46)
+    SetToggleVisual(FloatButton,true)
 
     StartFloat()
 end
@@ -788,12 +881,13 @@ local function DisableFloat()
 
     StopFloat()
 
-    FloatButton.Text = "FLOAT: OFF"
+    FloatButton.Text = "  FLOAT"
     FloatButton.TextColor3 =
-        Color3.fromRGB(255,110,110)
+        Color3.fromRGB(238,239,244)
 
     FloatButton.BackgroundColor3 =
-        Color3.fromRGB(55,55,68)
+        Color3.fromRGB(35,36,46)
+    SetToggleVisual(FloatButton,false)
 end
 
 FloatButton.MouseButton1Click:Connect(function()
@@ -928,12 +1022,10 @@ end
 local function ApplyFPSBoost()
     FPSBoostEnabled = true
 
-    FPSBoostButton.Text = "FPS BOOST: ACTIVE"
+    FPSBoostButton.Text = "  FPS BOOST"
     FPSBoostButton.TextColor3 =
-        Color3.fromRGB(100,255,130)
-
-    FPSBoostButton.BackgroundColor3 =
-        Color3.fromRGB(35,75,48)
+        Color3.fromRGB(255,215,80)
+    SetToggleVisual(FPSBoostButton,true)
 
     -- Aggressive local lighting reduction.
     pcall(function()
@@ -1214,24 +1306,28 @@ BatAutoButton.MouseButton1Click:Connect(function()
     if BatAutoEnabled then
 
         BatAutoButton.Text =
-            "BAT AUTO: ON"
+            "  BAT AUTO"
 
         BatAutoButton.TextColor3 =
             Color3.fromRGB(100,255,130)
 
         BatAutoButton.BackgroundColor3 =
-            Color3.fromRGB(35,75,48)
+            Color3.fromRGB(35,36,46)
+
+        SetToggleVisual(BatAutoButton,true)
 
     else
 
         BatAutoButton.Text =
-            "BAT AUTO: OFF"
+            "  BAT AUTO"
 
         BatAutoButton.TextColor3 =
-            Color3.fromRGB(255,110,110)
+            Color3.fromRGB(238,239,244)
 
         BatAutoButton.BackgroundColor3 =
-            Color3.fromRGB(55,55,68)
+            Color3.fromRGB(35,36,46)
+
+        SetToggleVisual(BatAutoButton,false)
 
     end
 end)
@@ -1471,7 +1567,7 @@ local function SetBatVisual(Index)
         ClearBatVisual()
 
         BatVisualButton.Text =
-            "BAT VISUAL: OFF"
+            "  BAT VISUAL: OFF"
 
         return
     end
@@ -1489,7 +1585,7 @@ local function SetBatVisual(Index)
         ClearBatVisual()
 
         BatVisualButton.Text =
-            "BAT VISUAL: OFF"
+            "  BAT VISUAL: OFF"
 
         return
     end
@@ -1500,12 +1596,12 @@ local function SetBatVisual(Index)
     if Success then
 
         BatVisualButton.Text =
-            "BAT: " .. BatName
+            "  BAT: " .. BatName
 
     else
 
         BatVisualButton.Text =
-            "BAT VISUAL: " .. BatName
+            "  BAT VISUAL: " .. BatName
 
     end
 end
@@ -1543,7 +1639,7 @@ task.spawn(function()
             end)
 
             BatVisualButton.Text =
-                "BAT: Cosmic Bat"
+                "  BAT: Cosmic Bat"
 
         end
     end
@@ -1644,26 +1740,30 @@ FarCameraButton.MouseButton1Click:Connect(function()
     if FarCameraEnabled then
 
         FarCameraButton.Text =
-            "FAR CAMERA: ON"
+            "  FAR CAMERA"
 
         FarCameraButton.TextColor3 =
             Color3.fromRGB(100,255,130)
 
         FarCameraButton.BackgroundColor3 =
-            Color3.fromRGB(35,75,48)
+            Color3.fromRGB(35,36,46)
+
+        SetToggleVisual(FarCameraButton,true)
 
         StartFarCamera()
 
     else
 
         FarCameraButton.Text =
-            "FAR CAMERA: OFF"
+            "  FAR CAMERA"
 
         FarCameraButton.TextColor3 =
-            Color3.fromRGB(255,110,110)
+            Color3.fromRGB(238,239,244)
 
         FarCameraButton.BackgroundColor3 =
-            Color3.fromRGB(55,55,68)
+            Color3.fromRGB(35,36,46)
+
+        SetToggleVisual(FarCameraButton,false)
 
         StopFarCamera()
 
@@ -1940,13 +2040,15 @@ task.spawn(function()
     BatAutoEnabled = true
 
     BatAutoButton.Text =
-        "BAT AUTO: ON"
+        "  BAT AUTO"
 
     BatAutoButton.TextColor3 =
         Color3.fromRGB(100,255,130)
 
     BatAutoButton.BackgroundColor3 =
-        Color3.fromRGB(35,75,48)
+        Color3.fromRGB(35,36,46)
+
+    SetToggleVisual(BatAutoButton,true)
 
     --// FAR CAMERA
     task.wait(0.15)
@@ -1954,13 +2056,15 @@ task.spawn(function()
     FarCameraEnabled = true
 
     FarCameraButton.Text =
-        "FAR CAMERA: ON"
+        "  FAR CAMERA"
 
     FarCameraButton.TextColor3 =
         Color3.fromRGB(100,255,130)
 
     FarCameraButton.BackgroundColor3 =
-        Color3.fromRGB(35,75,48)
+        Color3.fromRGB(35,36,46)
+
+    SetToggleVisual(FarCameraButton,true)
 
     StartFarCamera()
 
@@ -1971,7 +2075,7 @@ task.spawn(function()
     BatVisualIndex = 7
 
     BatVisualButton.Text =
-        "BAT: Cosmic Bat"
+        "  BAT: Cosmic Bat"
 
     --// Try immediately
     ApplyBatVisual("Cosmic Bat")
