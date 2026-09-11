@@ -13,24 +13,15 @@ API_KEY = os.environ.get("API_KEY", "CHANGE_THIS_SECRET_KEY")
 # KEEP YOUR WEBHOOK ENVIRONMENT VARIABLE THE SAME
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
-# Optional separate webhook for new highest-pet notifications.
-# If empty, the normal monitor webhook is used.
-PET_NOTIFICATION_WEBHOOK_URL = os.environ.get(
-    "PET_NOTIFICATION_WEBHOOK_URL",
-    ""
-)
-
 HEARTBEAT_TIMEOUT = int(os.environ.get("HEARTBEAT_TIMEOUT", "30"))
 DISCORD_UPDATE_INTERVAL = int(os.environ.get("DISCORD_UPDATE_INTERVAL", "5"))
 
 ACCOUNTS_FILE = "accounts.json"
 MESSAGE_FILE = "discord_message.json"
-HIGHEST_PET_MESSAGE_FILE = "highest_pet_message.json"
 
 accounts = {}
 state_lock = threading.Lock()
 discord_message_id = None
-highest_pet_message_id = None
 
 
 # ==========================================
@@ -148,34 +139,8 @@ def dashboard_text():
         name = account.get("playerName") or account.get("userId")
         eggs = int(account.get("eggs", 0))
 
-        pet = account.get("highestPet") or {}
-
-        if pet:
-            pet_name = str(pet.get("name") or "Unknown")
-            rarity = str(pet.get("rarity") or "Unknown")
-            weight = str(pet.get("weight") or "0Kg")
-
-            try:
-                cash = float(pet.get("cashPerSecond", 0))
-                if cash.is_integer():
-                    cash_text = f"${int(cash):,}/s"
-                else:
-                    cash_text = f"${cash:,.2f}/s"
-            except (TypeError, ValueError):
-                cash_text = "$0/s"
-
-            pet_text = (
-                f"🐾 **{pet_name}** | "
-                f"✨ **{rarity}** | "
-                f"💰 **{cash_text}** | "
-                f"⚖️ **{weight}**"
-            )
-        else:
-            pet_text = "🐾 **No pet detected**"
-
         lines.append(
-            f"{icon} **{name}** — 🥚 **{eggs:,}**\n"
-            f"　{pet_text}"
+            f"{icon} **{name}** — 🥚 **{eggs:,}**"
         )
 
     if not lines:
@@ -187,183 +152,6 @@ def dashboard_text():
         body = body[:3860] + "\n…more accounts not shown"
 
     return body, online, offline, len(items)
-
-
-# ==========================================
-# SAVE AND LOAD HIGHEST PET MESSAGE ID
-# ==========================================
-
-def load_highest_pet_message():
-    global highest_pet_message_id
-
-    if not os.path.exists(HIGHEST_PET_MESSAGE_FILE):
-        return
-
-    try:
-        with open(HIGHEST_PET_MESSAGE_FILE, "r", encoding="utf-8") as file:
-            data = json.load(file)
-
-        highest_pet_message_id = data.get("message_id")
-
-        if highest_pet_message_id:
-            print(
-                f"📂 Loaded highest-pet Discord message ID: "
-                f"{highest_pet_message_id}"
-            )
-
-    except Exception as error:
-        print("❌ Could not load highest-pet Discord message ID:")
-        print(repr(error))
-
-
-def save_highest_pet_message():
-    try:
-        with open(
-            HIGHEST_PET_MESSAGE_FILE,
-            "w",
-            encoding="utf-8"
-        ) as file:
-            json.dump({
-                "message_id": highest_pet_message_id
-            }, file)
-
-    except Exception as error:
-        print("❌ Could not save highest-pet Discord message ID:")
-        print(repr(error))
-
-
-# ==========================================
-# HIGHEST PET NOTIFICATION
-# ==========================================
-
-def highest_pet_payload(account, pet):
-    pet_name = str(pet.get("name") or "Unknown Pet")
-    rarity = str(pet.get("rarity") or "Unknown")
-    cash = pet.get("cashPerSecond", 0)
-    weight = str(pet.get("weight") or "0Kg")
-    player_name = str(
-        account.get("playerName")
-        or account.get("userId")
-        or "Unknown"
-    )
-
-    try:
-        cash_number = float(cash)
-        if cash_number.is_integer():
-            cash_text = f"${int(cash_number):,}/s"
-        else:
-            cash_text = f"${cash_number:,.2f}/s"
-    except (TypeError, ValueError):
-        cash_text = f"${cash}/s"
-
-    return {
-        "embeds": [{
-            "title": "🔥 HIGHEST PET",
-            "description": (
-                f"👤 **{player_name}**\n\n"
-                f"🐾 Pet: **{pet_name}**\n"
-                f"✨ Rarity: **{rarity}**\n"
-                f"💰 Cash/s: **{cash_text}**\n"
-                f"⚖️ Weight: **{weight}**"
-            ),
-            "color": 16766720,
-            "footer": {
-                "text": "Automatically updated when a new highest pet is detected"
-            },
-            "timestamp": time.strftime(
-                "%Y-%m-%dT%H:%M:%SZ",
-                time.gmtime()
-            )
-        }]
-    }
-
-
-def update_highest_pet_notification(account, pet):
-    global highest_pet_message_id
-
-    if not pet:
-        return
-
-    webhook = (
-        PET_NOTIFICATION_WEBHOOK_URL
-        or DISCORD_WEBHOOK_URL
-    )
-
-    if not webhook:
-        print("❌ No pet notification webhook configured")
-        return
-
-    payload = highest_pet_payload(account, pet)
-
-    try:
-        # ==========================================
-        # EDIT THE EXISTING HIGHEST PET MESSAGE
-        # ==========================================
-        if highest_pet_message_id:
-            url = (
-                f"{webhook}"
-                f"/messages/{highest_pet_message_id}"
-            )
-
-            response = requests.patch(
-                url,
-                json=payload,
-                timeout=15
-            )
-
-            print(
-                f"   Highest-pet PATCH status: "
-                f"{response.status_code}"
-            )
-
-            if 200 <= response.status_code < 300:
-                print("✅ Highest-pet message edited")
-                return
-
-            if response.status_code == 404:
-                print(
-                    "⚠️ Highest-pet message not found. "
-                    "Creating a new one..."
-                )
-                highest_pet_message_id = None
-                save_highest_pet_message()
-            else:
-                print("❌ Highest-pet PATCH error:")
-                print(response.text[:1000])
-                return
-
-        # ==========================================
-        # CREATE THE MESSAGE ONLY IF NONE EXISTS
-        # ==========================================
-        url = webhook + "?wait=true"
-
-        response = requests.post(
-            url,
-            json=payload,
-            timeout=15
-        )
-
-        print(
-            f"   Highest-pet POST status: "
-            f"{response.status_code}"
-        )
-
-        if 200 <= response.status_code < 300:
-            data = response.json()
-            highest_pet_message_id = data.get("id")
-            save_highest_pet_message()
-
-            print(
-                "✅ Highest-pet message created | "
-                f"Message ID: {highest_pet_message_id}"
-            )
-        else:
-            print("❌ Highest-pet POST error:")
-            print(response.text[:1000])
-
-    except Exception as error:
-        print("❌ Highest-pet Discord connection error:")
-        print(repr(error))
 
 
 # ==========================================
@@ -647,56 +435,26 @@ def heartbeat():
 
     try:
         eggs = int(data.get("eggs", 0))
+
     except (TypeError, ValueError):
         eggs = 0
 
-    highest_pet = data.get("highestPet")
-    if not isinstance(highest_pet, dict):
-        highest_pet = None
 
     with state_lock:
-        previous_account = accounts.get(user_id, {})
-        previous_pet = previous_account.get("highestPet") or {}
 
         accounts[user_id] = {
             "userId": user_id,
             "playerName": player_name,
             "displayName": display_name,
             "eggs": eggs,
-            "highestPet": highest_pet,
             "lastSeen": time.time()
         }
+
 
     print(
         f"📡 Heartbeat received: "
         f"{player_name} | 🥚 Eggs: {eggs}"
     )
-
-    if highest_pet:
-        print(
-            f"   🐾 Highest pet: "
-            f"{highest_pet.get('name', 'Unknown')} | "
-            f"{highest_pet.get('rarity', 'Unknown')} | "
-            f"${highest_pet.get('cashPerSecond', 0)}/s | "
-            f"{highest_pet.get('weight', '0Kg')}"
-        )
-
-    previous_uid = str(previous_pet.get("uid", ""))
-    current_uid = str(highest_pet.get("uid", "")) if highest_pet else ""
-
-    if current_uid and current_uid != previous_uid:
-        threading.Thread(
-            target=update_highest_pet_notification,
-            args=(
-                {
-                    "userId": user_id,
-                    "playerName": player_name,
-                    "displayName": display_name
-                },
-                highest_pet
-            ),
-            daemon=True
-        ).start()
 
 
     # Save the account permanently
@@ -722,7 +480,6 @@ def heartbeat():
 
 load_accounts()
 load_discord_message()
-load_highest_pet_message()
 
 
 threading.Thread(
