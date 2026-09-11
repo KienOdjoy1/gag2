@@ -901,7 +901,7 @@ FloatButton.MouseButton1Click:Connect(function()
 end)
 
 --//============================================================//
---// FPS BOOST — ONE-WAY / NO RESTORE
+--// FPS BOOST — FULL ON/OFF + RESTORE
 --//============================================================//
 
 local FPSBoostEnabled = false
@@ -919,7 +919,87 @@ local ObjectFolderNames = {
     ["MACHINES"] = true
 }
 
+--//============================================================//
+--// SAVED FPS SETTINGS
+--//============================================================//
+
+local SavedLighting = nil
+local SavedObjects = {}
+local SavedPostEffects = {}
+
+local function SaveLighting()
+
+    if SavedLighting then
+        return
+    end
+
+    SavedLighting = {
+        GlobalShadows = Lighting.GlobalShadows,
+        ShadowSoftness = Lighting.ShadowSoftness,
+        EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
+        EnvironmentSpecularScale = Lighting.EnvironmentSpecularScale,
+        FogEnd = Lighting.FogEnd
+    }
+
+end
+
+local function SaveObject(Object)
+
+    if SavedObjects[Object] then
+        return
+    end
+
+    if not Object or not Object.Parent then
+        return
+    end
+
+    if IsPlayerCharacter(Object) then
+        return
+    end
+
+    if Object:IsA("BasePart") then
+
+        SavedObjects[Object] = {
+            Type = "BasePart",
+            LocalTransparencyModifier =
+                Object.LocalTransparencyModifier,
+
+            CastShadow =
+                Object.CastShadow,
+
+            Reflectance =
+                Object.Reflectance
+        }
+
+    elseif Object:IsA("ParticleEmitter")
+        or Object:IsA("Trail")
+        or Object:IsA("Beam")
+        or Object:IsA("Fire")
+        or Object:IsA("Smoke")
+        or Object:IsA("Sparkles")
+    then
+
+        SavedObjects[Object] = {
+            Type = "Enabled",
+            Enabled = Object.Enabled
+        }
+
+    elseif Object:IsA("PostEffect") then
+
+        SavedPostEffects[Object] = {
+            Enabled = Object.Enabled
+        }
+
+    end
+
+end
+
+--//============================================================//
+--// CHARACTER CHECK
+--//============================================================//
+
 local function IsPlayerCharacter(Object)
+
     local Character = Player.Character
 
     if not Character then
@@ -927,182 +1007,336 @@ local function IsPlayerCharacter(Object)
     end
 
     return Object:IsDescendantOf(Character)
+
 end
 
+--//============================================================//
+--// FOLDER CHECKS
+--//============================================================//
+
 local function IsRenderFolder(Object)
+
     return Object
         and RenderFolderNames[Object.Name] == true
+
 end
 
 local function IsObjectFolder(Object)
+
     return Object
         and Object.Parent
         and Object.Parent.Name == "__OBJECTS"
         and ObjectFolderNames[Object.Name] == true
+
 end
 
-local function RemoveRenderFolder(Object)
-    if not Object or not IsRenderFolder(Object) then
+--//============================================================//
+--// OPTIMIZE ONE OBJECT
+--//============================================================//
+
+local function OptimizeObject(Object)
+
+    if not Object or not Object.Parent then
         return
     end
 
-    pcall(function()
-        Object:Destroy()
-    end)
-end
-
-local function RemoveRenderFolders()
-    for _,Object in ipairs(workspace:GetDescendants()) do
-        if IsRenderFolder(Object) then
-            RemoveRenderFolder(Object)
-        end
-    end
-end
-
-local function RemoveObjectFolder(Object)
-    if not IsObjectFolder(Object) then
+    if IsPlayerCharacter(Object) then
         return
     end
 
-    pcall(function()
-        Object:Destroy()
-    end)
-end
+    SaveObject(Object)
 
-local function RemoveObjectFolders()
-    local ObjectsFolder = workspace:FindFirstChild("__OBJECTS")
-
-    if not ObjectsFolder then
-        return
-    end
-
-    for _,Object in ipairs(ObjectsFolder:GetChildren()) do
-        if ObjectFolderNames[Object.Name] then
-            RemoveObjectFolder(Object)
-        end
-    end
-end
-
-local function RemoveVisualObject(Object)
-    if not Object or IsPlayerCharacter(Object) then
-        return
-    end
-
-    -- Completely remove heavy visual/effect instances locally.
+    -- Heavy visual effects
     if Object:IsA("ParticleEmitter")
         or Object:IsA("Trail")
         or Object:IsA("Beam")
         or Object:IsA("Fire")
         or Object:IsA("Smoke")
         or Object:IsA("Sparkles")
-        or Object:IsA("PostEffect")
-        or Object:IsA("Decal")
-        or Object:IsA("Texture")
-        or Object:IsA("SurfaceAppearance")
     then
+
         pcall(function()
-            Object:Destroy()
+            Object.Enabled = false
         end)
 
         return
     end
 
-    -- Keep world geometry from disappearing entirely, but remove
-    -- its local rendering cost and shadows. Nothing is saved.
+    -- World geometry
     if Object:IsA("BasePart") then
+
         pcall(function()
+
             Object.LocalTransparencyModifier = 1
             Object.CastShadow = false
             Object.Reflectance = 0
+
         end)
+
     end
+
 end
 
-local function ApplyFPSBoost()
-    FPSBoostEnabled = true
+--//============================================================//
+--// OPTIMIZE POST EFFECTS
+--//============================================================//
+
+local function OptimizePostEffects()
+
+    for _,Object in ipairs(Lighting:GetChildren()) do
+
+        if Object:IsA("PostEffect") then
+
+            if not SavedPostEffects[Object] then
+
+                SavedPostEffects[Object] = {
+                    Enabled = Object.Enabled
+                }
+
+            end
+
+            pcall(function()
+                Object.Enabled = false
+            end)
+
+        end
+
+    end
+
+end
+
+--//============================================================//
+--// RESTORE EVERYTHING
+--//============================================================//
+
+local function RestoreFPSBoost()
+
+    FPSBoostEnabled = false
+
+    -- Restore lighting
+    if SavedLighting then
+
+        pcall(function()
+
+            Lighting.GlobalShadows =
+                SavedLighting.GlobalShadows
+
+            Lighting.ShadowSoftness =
+                SavedLighting.ShadowSoftness
+
+            Lighting.EnvironmentDiffuseScale =
+                SavedLighting.EnvironmentDiffuseScale
+
+            Lighting.EnvironmentSpecularScale =
+                SavedLighting.EnvironmentSpecularScale
+
+            Lighting.FogEnd =
+                SavedLighting.FogEnd
+
+        end)
+
+    end
+
+    -- Restore objects
+    for Object,Data in pairs(SavedObjects) do
+
+        if Object and Object.Parent then
+
+            pcall(function()
+
+                if Data.Type == "BasePart" then
+
+                    Object.LocalTransparencyModifier =
+                        Data.LocalTransparencyModifier
+
+                    Object.CastShadow =
+                        Data.CastShadow
+
+                    Object.Reflectance =
+                        Data.Reflectance
+
+                elseif Data.Type == "Enabled" then
+
+                    Object.Enabled =
+                        Data.Enabled
+
+                end
+
+            end)
+
+        end
+
+    end
+
+    -- Restore post effects
+    for Object,Data in pairs(SavedPostEffects) do
+
+        if Object and Object.Parent then
+
+            pcall(function()
+                Object.Enabled = Data.Enabled
+            end)
+
+        end
+
+    end
+
+    table.clear(SavedObjects)
+    table.clear(SavedPostEffects)
+
+    SavedLighting = nil
 
     FPSBoostButton.Text = "  FPS BOOST"
     FPSBoostButton.TextColor3 =
+        Color3.fromRGB(238,239,244)
+
+    FPSBoostButton.BackgroundColor3 =
+        Color3.fromRGB(35,36,46)
+
+    SetToggleVisual(FPSBoostButton,false)
+
+    StatusLabel.Text =
+        "● FPS BOOST OFF — RESTORED"
+
+    StatusLabel.TextColor3 =
         Color3.fromRGB(255,215,80)
+
+end
+
+--//============================================================//
+--// APPLY FPS BOOST
+--//============================================================//
+
+local function ApplyFPSBoost()
+
+    FPSBoostEnabled = true
+
+    SaveLighting()
+
+    FPSBoostButton.Text = "  FPS BOOST"
+    FPSBoostButton.TextColor3 =
+        Color3.fromRGB(100,255,130)
+
+    FPSBoostButton.BackgroundColor3 =
+        Color3.fromRGB(35,36,46)
+
     SetToggleVisual(FPSBoostButton,true)
 
-    -- Aggressive local lighting reduction.
+    -- Save and reduce lighting
     pcall(function()
+
         Lighting.GlobalShadows = false
         Lighting.ShadowSoftness = 0
         Lighting.EnvironmentDiffuseScale = 0
         Lighting.EnvironmentSpecularScale = 0
         Lighting.FogEnd = 1000000
+
     end)
 
-    -- Delete known heavy render/object containers locally.
-    RemoveRenderFolders()
-    RemoveObjectFolders()
-
-    -- Remove/hide everything that is safe to optimize locally.
+    -- Optimize workspace objects
     for _,Object in ipairs(workspace:GetDescendants()) do
-        if IsRenderFolder(Object) then
-            RemoveRenderFolder(Object)
-        elseif IsObjectFolder(Object) then
-            RemoveObjectFolder(Object)
-        else
-            RemoveVisualObject(Object)
+
+        if IsPlayerCharacter(Object) then
+            continue
         end
+
+        OptimizeObject(Object)
+
     end
 
-    -- Also remove post-processing effects currently under Lighting.
-    for _,Object in ipairs(Lighting:GetChildren()) do
-        if Object:IsA("PostEffect") then
-            pcall(function()
-                Object:Destroy()
-            end)
-        end
-    end
+    -- Optimize post processing
+    OptimizePostEffects()
 
-    StatusLabel.Text = "● FPS BOOST ACTIVE — NO RESTORE"
+    StatusLabel.Text =
+        "● FPS BOOST ACTIVE"
+
     StatusLabel.TextColor3 =
         Color3.fromRGB(100,255,130)
+
 end
 
--- FPS Boost is intentionally one-way.
--- Clicking the button again only reapplies the boost.
+--//============================================================//
+--// FPS BOOST BUTTON
+--//============================================================//
+
 FPSBoostButton.MouseButton1Click:Connect(function()
-    ApplyFPSBoost()
+
+    if FPSBoostEnabled then
+
+        RestoreFPSBoost()
+
+    else
+
+        ApplyFPSBoost()
+
+    end
+
 end)
 
 --//============================================================//
---// FPS BOOST — NEW OBJECT DETECTION
+--// NEW OBJECT DETECTION
 --//============================================================//
 
 workspace.DescendantAdded:Connect(function(Object)
+
     if not FPSBoostEnabled then
         return
     end
 
     task.defer(function()
-        if not FPSBoostEnabled or not Object.Parent then
+
+        if not FPSBoostEnabled then
             return
         end
 
-        -- Check the object and its ancestors for known render containers.
-        local Current = Object
-
-        while Current and Current ~= workspace do
-            if IsRenderFolder(Current) then
-                RemoveRenderFolder(Current)
-                return
-            end
-
-            if IsObjectFolder(Current) then
-                RemoveObjectFolder(Current)
-                return
-            end
-
-            Current = Current.Parent
+        if not Object or not Object.Parent then
+            return
         end
 
-        RemoveVisualObject(Object)
+        if IsPlayerCharacter(Object) then
+            return
+        end
+
+        OptimizeObject(Object)
+
     end)
+
+end)
+
+--//============================================================//
+--// LIGHTING EFFECT DETECTION
+--//============================================================//
+
+Lighting.ChildAdded:Connect(function(Object)
+
+    if not FPSBoostEnabled then
+        return
+    end
+
+    task.defer(function()
+
+        if not FPSBoostEnabled then
+            return
+        end
+
+        if Object:IsA("PostEffect") then
+
+            if not SavedPostEffects[Object] then
+
+                SavedPostEffects[Object] = {
+                    Enabled = Object.Enabled
+                }
+
+            end
+
+            pcall(function()
+                Object.Enabled = false
+            end)
+
+        end
+
+    end)
+
 end)
 
 --//============================================================//
