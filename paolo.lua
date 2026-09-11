@@ -910,8 +910,7 @@ local RenderFolderNames = {
     ["ClientRenderedAssets"] = true,
     ["PlacedEggRenders"] = true,
     ["Plots"] = true,
-    ["Stands"] = true,
-    ["__ClientTreadmillRenders"] = true
+    ["Stands"] = true
 }
 
 local ObjectFolderNames = {
