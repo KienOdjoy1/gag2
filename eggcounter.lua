@@ -87,17 +87,130 @@ end
 --------------------------------------------------
 
 local CurrentEggCount = 0
+local CurrentMoney = nil
+local CurrentSpeed = nil
+local CurrentPets = nil
+
+--------------------------------------------------
+--// GET PLAYER STATS FROM THE GAME
+--// Money   = Save.Money
+--// Speed   = Humanoid.WalkSpeed (website displays WS)
+--// Pets    = number of equipped/active pets
+--------------------------------------------------
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Save = nil
+
+pcall(function()
+    Save = require(ReplicatedStorage.Library.Client.Save)
+end)
+
+local function GetPlayerStats()
+    local Money = nil
+    local Speed = nil
+    local Pets = nil
+
+    local PlayerGui = Player:FindFirstChild("PlayerGui")
+
+    if not PlayerGui then
+        return nil, nil, nil
+    end
+
+    -- MONEY
+    pcall(function()
+        local HUD = PlayerGui:FindFirstChild("HUD")
+        local GameHUD = HUD and HUD:FindFirstChild("GameHUD")
+        local BottomLeft = GameHUD and GameHUD:FindFirstChild("BottomLeft")
+        local MoneyUI = BottomLeft and BottomLeft:FindFirstChild("Money")
+        local Value = MoneyUI and MoneyUI:FindFirstChild("Value")
+
+        if Value and Value:IsA("TextLabel") then
+            Money = Value.Text
+        end
+    end)
+
+    -- SPEED
+    pcall(function()
+        local HUD = PlayerGui:FindFirstChild("HUD")
+        local GameHUD = HUD and HUD:FindFirstChild("GameHUD")
+        local BottomLeft = GameHUD and GameHUD:FindFirstChild("BottomLeft")
+        local SpeedUI = BottomLeft and BottomLeft:FindFirstChild("Speed")
+        local Value = SpeedUI and SpeedUI:FindFirstChild("Value")
+
+        if Value and Value:IsA("TextLabel") then
+            Speed = Value.Text
+        end
+    end)
+
+    -- ACTIVE PETS
+    pcall(function()
+        local ActivePets = PlayerGui:FindFirstChild("ActivePets")
+        local Frame = ActivePets and ActivePets:FindFirstChild("Frame")
+        local ScrollingFrame = Frame and Frame:FindFirstChild("ScrollingFrame")
+
+        if ScrollingFrame then
+            local Count = 0
+
+            for _, Pet in ipairs(ScrollingFrame:GetChildren()) do
+                if Pet:IsA("Frame") and string.sub(Pet.Name, 1, 4) == "Pet_" then
+                    Count += 1
+                end
+            end
+
+            Pets = Count
+        end
+    end)
+
+    CurrentMoney = Money
+    CurrentSpeed = Speed
+    CurrentPets = Pets
+
+    print("DEBUG MONEY:", Money)
+    print("DEBUG SPEED:", Speed)
+    print("DEBUG PETS:", Pets)
+
+    return Money, Speed, Pets
+end
 
 local function SendHeartbeat(EggCount)
     CurrentEggCount = tonumber(EggCount) or 0
 
-    local Success, Result = SendMonitorRequest({
+    local Money, _, Pets = GetPlayerStats()
+
+    -- Read SPEED DIRECTLY from the game's UI
+    local Speed = nil
+
+    pcall(function()
+        local HUD = PlayerGui:FindFirstChild("HUD")
+        local GameHUD = HUD and HUD:FindFirstChild("GameHUD")
+        local BottomLeft = GameHUD and GameHUD:FindFirstChild("BottomLeft")
+        local SpeedUI = BottomLeft and BottomLeft:FindFirstChild("Speed")
+        local Value = SpeedUI and SpeedUI:FindFirstChild("Value")
+
+        if Value and Value:IsA("TextLabel") then
+            Speed = Value.Text
+        end
+    end)
+
+    local Data = {
         userId = tostring(Player.UserId),
         playerName = Player.Name,
         displayName = Player.DisplayName,
+
         eggs = CurrentEggCount,
+        money = Money,
+        rate = Speed,
+        pets = Pets,
+
         timestamp = os.time()
-    })
+    }
+
+    print("SENDING MONEY:", Money)
+    print("SENDING SPEED:", Speed)
+    print("SENDING PETS:", Pets)
+    print("FINAL RATE SENT:", Data.rate)
+
+    local Success, Result = SendMonitorRequest(Data)
 
     if not Success then
         warn("⚠️ Monitor heartbeat failed:", Result)
@@ -106,6 +219,7 @@ local function SendHeartbeat(EggCount)
 
     return true
 end
+
 local old = PlayerGui:FindFirstChild("KyoshEggCounter")
 
 if old then
