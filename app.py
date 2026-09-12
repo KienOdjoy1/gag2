@@ -129,26 +129,26 @@ def format_money(value):
 
 
 def format_rate(value):
+    # rate is the game's SpeedPower value, not Humanoid.WalkSpeed.
     if value is None or value == "":
         return "—"
 
     try:
         number = float(value)
-
         suffixes = [
-            (1e18, "Qi/s"),
-            (1e15, "Qa/s"),
-            (1e12, "T/s"),
-            (1e9, "B/s"),
-            (1e6, "M/s"),
-            (1e3, "K/s"),
+            (1e18, "Qi"),
+            (1e15, "Qa"),
+            (1e12, "T"),
+            (1e9, "B"),
+            (1e6, "M"),
+            (1e3, "K"),
         ]
 
         for divisor, suffix in suffixes:
             if abs(number) >= divisor:
                 return f"{number / divisor:.2f}{suffix}"
 
-        return f"{number:,.0f}/s"
+        return f"{number:,.0f}"
 
     except (TypeError, ValueError):
         return escape(str(value))
@@ -665,10 +665,24 @@ function renderRate(value){
     if(value === null || value === undefined || value === "") return "—";
 
     const speed = Number(value);
-
     if(!Number.isFinite(speed)) return "—";
 
-    return speed.toFixed(2) + " WS";
+    const suffixes = [
+        [1e18, "Qi"],
+        [1e15, "Qa"],
+        [1e12, "T"],
+        [1e9, "B"],
+        [1e6, "M"],
+        [1e3, "K"]
+    ];
+
+    for(const [divisor, suffix] of suffixes){
+        if(Math.abs(speed) >= divisor){
+            return (speed / divisor).toFixed(2) + suffix;
+        }
+    }
+
+    return speed.toLocaleString();
 }
 
 function renderAccounts(data){
