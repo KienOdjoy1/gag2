@@ -8,7 +8,7 @@ local Scripts = {
 
     --// 🥚 STEAL AN EGG
     [107778070777162] = {
-        "https://raw.githubusercontent.com/KienOdjoy1/gag2/refs/heads/main/pubsae.lua"
+        "https://raw.githubusercontent.com/KienOdjoy1/gag2/refs/heads/main/saev2.lua"
     },
 
     --// 🌱 GROW A GARDEN 2
