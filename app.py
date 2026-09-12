@@ -815,6 +815,14 @@ def heartbeat():
     rate = data.get("rate")
     pets = data.get("pets")
 
+    print("========== HEARTBEAT DEBUG ==========")
+    print("PLAYER:", player_name)
+    print("MONEY:", money)
+    print("RATE:", rate)
+    print("PETS:", pets)
+    print("EGGS:", eggs)
+    print("=====================================")
+
     with state_lock:
         old = accounts.get(user_id, {})
 
