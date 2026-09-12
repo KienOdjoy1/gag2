@@ -645,22 +645,7 @@ function renderMoney(value){
 function renderRate(value){
     if(value === null || value === undefined || value === "") return "—";
 
-    const text = String(value);
-
-    // Handle Roblox RichText font color
-    const match = text.match(
-        /<font\s+color=["']?(#[0-9A-Fa-f]{6})["']?>\s*(.*?)\s*<\/font>/i
-    );
-
-    if(match){
-        const color = match[1];
-        const content = esc(match[2]);
-
-        return `<span style="color:${color};font-weight:700;">${content}</span>`;
-    }
-
-    // Normal text
-    return esc(text);
+    return esc(value);
 }
 
 function renderAccounts(data){
