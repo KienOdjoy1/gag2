@@ -629,7 +629,7 @@ h1{
             <div>ACCOUNT</div>
             <div>STATUS</div>
             <div>MONEY</div>
-            <div>RATE</div>
+            <div>SPEED</div>
             <div>EGGS</div>
             <div>PETS</div>
             <div>LAST SEEN</div>
@@ -663,7 +663,12 @@ function renderMoney(value){
 
 function renderRate(value){
     if(value === null || value === undefined || value === "") return "—";
-    return esc(value);
+
+    const speed = Number(value);
+
+    if(!Number.isFinite(speed)) return "—";
+
+    return speed.toFixed(2) + " WS";
 }
 
 function renderAccounts(data){
