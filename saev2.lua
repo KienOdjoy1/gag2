@@ -42,7 +42,7 @@ ScreenGui.Parent = PlayerGui
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.new(0,370,0,380)
+Main.Size = UDim2.new(0,370,0,445)
 Main.Position = UDim2.new(0.5,-185,0.5,-227)
 Main.BackgroundColor3 = Color3.fromRGB(13,14,19)
 Main.BorderSizePixel = 0
@@ -462,12 +462,14 @@ local FloatButton = MakeButton("FloatButton","  FLOAT",UDim2.new(0,0,0,151),true
 local BatAutoButton = MakeButton("BatAutoButton","  BAT AUTO",UDim2.new(0.52,0,0,151),true)
 local FarCameraButton = MakeButton("FarCameraButton","  FAR CAMERA",UDim2.new(0,0,0,200),true)
 local BatVisualButton = MakeButton("BatVisualButton","  BAT VISUAL: OFF",UDim2.new(0.52,0,0,200))
+local AntiRagdollButton = MakeButton("AntiRagdollButton","  ANTI RAGDOLL",UDim2.new(0,0,0,249), true)
 
 SetToggleVisual(GodModeButton,false)
 SetToggleVisual(FPSBoostButton,false)
 SetToggleVisual(FloatButton,false)
 SetToggleVisual(BatAutoButton,false)
 SetToggleVisual(FarCameraButton,false)
+SetToggleVisual(AntiRagdollButton,false)
 
 --//============================================================//
 --// MOBILE MINIMIZED BUTTON
@@ -756,6 +758,270 @@ GodModeButton.MouseButton1Click:Connect(function()
 end)
 
 --//============================================================//
+--// 🛡 ANTI RAGDOLL + ANTI KNOCKBACK
+--//============================================================//
+
+local AntiRagdollEnabled = false
+
+local ANTI_RAGDOLL_DELAY = 0.01
+
+local AntiRagdollConnections = {}
+local AntiRagdollCharacter = nil
+
+local function DisconnectAntiRagdoll()
+    for _, Connection in ipairs(AntiRagdollConnections) do
+        pcall(function()
+            Connection:Disconnect()
+        end)
+    end
+
+    table.clear(AntiRagdollConnections)
+end
+
+local function IsRagdollState(State)
+    return State == Enum.HumanoidStateType.Physics
+        or State == Enum.HumanoidStateType.Ragdoll
+        or State == Enum.HumanoidStateType.FallingDown
+        or State == Enum.HumanoidStateType.PlatformStanding
+end
+
+local function RestoreCharacter(Character)
+    if not AntiRagdollEnabled then
+        return
+    end
+
+    if not Character or not Character.Parent then
+        return
+    end
+
+    local Humanoid =
+        Character:FindFirstChildOfClass("Humanoid")
+
+    local Root =
+        Character:FindFirstChild("HumanoidRootPart")
+
+    if not Humanoid or not Root then
+        return
+    end
+
+    if Humanoid.Health <= 0 then
+        return
+    end
+
+    -- Restore Motor6D joints
+    for _, Object in ipairs(Character:GetDescendants()) do
+        if Object:IsA("Motor6D") then
+            pcall(function()
+                Object.Enabled = true
+            end)
+        end
+    end
+
+    -- Remove temporary ragdoll constraints.
+    -- Only remove constraints that are inside a ragdoll-named
+    -- object/folder so normal character constraints aren't touched.
+    for _, Object in ipairs(Character:GetDescendants()) do
+
+        if Object:IsA("BallSocketConstraint")
+            or Object:IsA("HingeConstraint") then
+
+            local Parent = Object.Parent
+
+            if Parent
+                and (
+                    Parent.Name:lower():find("ragdoll")
+                    or Object.Name:lower():find("ragdoll")
+                )
+            then
+                pcall(function()
+                    Object:Destroy()
+                end)
+            end
+        end
+    end
+
+    -- Stop knockback and spinning
+    pcall(function()
+        Root.AssemblyLinearVelocity = Vector3.zero
+        Root.AssemblyAngularVelocity = Vector3.zero
+    end)
+
+    -- Restore Humanoid
+    pcall(function()
+        Humanoid.PlatformStand = false
+        Humanoid.AutoRotate = true
+    end)
+
+    -- Get back up
+    pcall(function()
+        Humanoid:ChangeState(
+            Enum.HumanoidStateType.GettingUp
+        )
+    end)
+end
+
+local function SetupAntiRagdoll(Character)
+
+    DisconnectAntiRagdoll()
+
+    AntiRagdollCharacter = Character
+
+    local Humanoid =
+        Character:WaitForChild("Humanoid",10)
+
+    local Root =
+        Character:WaitForChild("HumanoidRootPart",10)
+
+    if not Humanoid or not Root then
+        return
+    end
+
+    -- Detect ragdoll immediately
+    table.insert(
+        AntiRagdollConnections,
+
+        Humanoid.StateChanged:Connect(
+            function(_,State)
+
+                if not AntiRagdollEnabled then
+                    return
+                end
+
+                if IsRagdollState(State) then
+
+                    RestoreCharacter(Character)
+
+                    -- Second recovery attempt after 0.01 sec
+                    task.delay(
+                        ANTI_RAGDOLL_DELAY,
+                        function()
+
+                            if AntiRagdollEnabled
+                                and Character.Parent
+                            then
+                                RestoreCharacter(Character)
+                            end
+
+                        end
+                    )
+                end
+            end
+        )
+    )
+
+    -- Continuous protection
+    table.insert(
+        AntiRagdollConnections,
+
+        RunService.Heartbeat:Connect(
+            function()
+
+                if not AntiRagdollEnabled then
+                    return
+                end
+
+                if not Character.Parent then
+                    return
+                end
+
+                if Humanoid.Health <= 0 then
+                    return
+                end
+
+                local State =
+                    Humanoid:GetState()
+
+                if IsRagdollState(State) then
+                    RestoreCharacter(Character)
+                end
+
+                -- Kill knockback
+                pcall(function()
+                    Root.AssemblyLinearVelocity =
+                        Vector3.zero
+
+                    Root.AssemblyAngularVelocity =
+                        Vector3.zero
+                end)
+
+            end
+        )
+    )
+end
+
+local function EnableAntiRagdoll()
+
+    AntiRagdollEnabled = true
+
+    if Player.Character then
+        task.spawn(function()
+            SetupAntiRagdoll(Player.Character)
+        end)
+    end
+
+    AntiRagdollButton.Text =
+        "  ANTI RAGDOLL"
+
+    AntiRagdollButton.TextColor3 =
+        Color3.fromRGB(100,255,130)
+
+    AntiRagdollButton.BackgroundColor3 =
+        Color3.fromRGB(35,36,46)
+
+    SetToggleVisual(
+        AntiRagdollButton,
+        true
+    )
+
+    StatusLabel.Text =
+        "● ANTI RAGDOLL + KNOCKBACK ACTIVE"
+
+    StatusLabel.TextColor3 =
+        Color3.fromRGB(100,255,130)
+end
+
+local function DisableAntiRagdoll()
+
+    AntiRagdollEnabled = false
+
+    DisconnectAntiRagdoll()
+
+    AntiRagdollCharacter = nil
+
+    AntiRagdollButton.Text =
+        "  ANTI RAGDOLL"
+
+    AntiRagdollButton.TextColor3 =
+        Color3.fromRGB(238,239,244)
+
+    AntiRagdollButton.BackgroundColor3 =
+        Color3.fromRGB(35,36,46)
+
+    SetToggleVisual(
+        AntiRagdollButton,
+        false
+    )
+
+    StatusLabel.Text =
+        "● SYSTEM ONLINE"
+
+    StatusLabel.TextColor3 =
+        Color3.fromRGB(100,255,130)
+end
+
+AntiRagdollButton.MouseButton1Click:Connect(
+    function()
+
+        if AntiRagdollEnabled then
+            DisableAntiRagdoll()
+        else
+            EnableAntiRagdoll()
+        end
+
+    end
+)
+
+--//============================================================//
 --// ADVANCED FLOAT
 --//============================================================//
 
@@ -909,7 +1175,6 @@ local FPSBoostEnabled = false
 local RenderFolderNames = {
     ["ClientRenderedAssets"] = true,
     ["PlacedEggRenders"] = true,
-    ["Plots"] = true,
     ["Stands"] = true,
     ["__ClientTreadmillRenders"] = true
 }
@@ -984,12 +1249,62 @@ local function RemoveObjectFolders()
     end
 end
 
+--------------------------------------------------
+--// PLOT OBJECTS THAT MUST STAY VISIBLE
+--------------------------------------------------
+
+local KeepPlotObjectsVisible = {
+    ["TreadmillBottom"] = true,
+    ["TreadmillUpgrade"] = true,
+    ["PlotUpgrade"] = true,
+    ["Multiplier"] = true
+}
+
+local function IsKeepPlotObject(Object)
+
+    if not Object then
+        return false
+    end
+
+    -- Object itself
+    if KeepPlotObjectsVisible[Object.Name] then
+        return true
+    end
+
+    -- Anything inside the protected object
+    local Current = Object.Parent
+
+    while Current and Current ~= workspace do
+
+        if KeepPlotObjectsVisible[Current.Name] then
+            return true
+        end
+
+        Current = Current.Parent
+    end
+
+    return false
+end
+
 local function RemoveVisualObject(Object)
+
     if not Object or IsPlayerCharacter(Object) then
         return
     end
 
-    -- Completely remove heavy visual/effect instances locally.
+    -- NEVER modify the important plot objects
+    if IsKeepPlotObject(Object) then
+        if Object:IsA("BasePart") then
+            pcall(function()
+                Object.LocalTransparencyModifier = 0
+                Object.CastShadow = false
+            end)
+        end
+
+        return
+    end
+
+    -- Remove heavy visual effects
     if Object:IsA("ParticleEmitter")
         or Object:IsA("Trail")
         or Object:IsA("Beam")
@@ -1001,6 +1316,7 @@ local function RemoveVisualObject(Object)
         or Object:IsA("Texture")
         or Object:IsA("SurfaceAppearance")
     then
+
         pcall(function()
             Object:Destroy()
         end)
@@ -1008,8 +1324,7 @@ local function RemoveVisualObject(Object)
         return
     end
 
-    -- Keep world geometry from disappearing entirely, but remove
-    -- its local rendering cost and shadows. Nothing is saved.
+    -- Hide other unnecessary geometry
     if Object:IsA("BasePart") then
         pcall(function()
             Object.LocalTransparencyModifier = 1
@@ -1799,6 +2114,13 @@ Player.CharacterAdded:Connect(function(Character)
         StartFarCamera()
     end
 
+    if AntiRagdollEnabled then
+        task.wait(0.1)
+    task.spawn(function()
+        SetupAntiRagdoll(Character)
+        end)
+    end
+
     if BatVisualEnabled
         and BatVisualIndex == 7
     then
@@ -2033,6 +2355,11 @@ task.spawn(function()
     task.wait(0.15)
 
     EnableFloat()
+
+    --// ANTI RAGDOLL
+    task.wait(0.15)
+
+    EnableAntiRagdoll()
 
     --// BAT AUTO
     task.wait(0.15)
