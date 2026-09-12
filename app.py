@@ -10,8 +10,6 @@ import requests
 app = Flask(__name__)
 
 API_KEY = os.environ.get("API_KEY", "CHANGE_THIS_SECRET_KEY")
-
-# KEEP YOUR WEBHOOK ENVIRONMENT VARIABLE THE SAME
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
 HEARTBEAT_TIMEOUT = int(os.environ.get("HEARTBEAT_TIMEOUT", "30"))
@@ -45,21 +43,19 @@ def load_accounts():
             print(f"📂 Loaded {len(accounts)} saved account(s)")
 
     except Exception as error:
-        print("❌ Could not load accounts:")
-        print(repr(error))
+        print("❌ Could not load accounts:", repr(error))
 
 
 def save_accounts():
     try:
         with state_lock:
-            data = accounts.copy()
+            data = dict(accounts)
 
         with open(ACCOUNTS_FILE, "w", encoding="utf-8") as file:
             json.dump(data, file, indent=2)
 
     except Exception as error:
-        print("❌ Could not save accounts:")
-        print(repr(error))
+        print("❌ Could not save accounts:", repr(error))
 
 
 def load_discord_message():
@@ -75,8 +71,7 @@ def load_discord_message():
         discord_message_id = data.get("message_id")
 
     except Exception as error:
-        print("❌ Could not load Discord message ID:")
-        print(repr(error))
+        print("❌ Could not load Discord message ID:", repr(error))
 
 
 def save_discord_message():
@@ -85,8 +80,7 @@ def save_discord_message():
             json.dump({"message_id": discord_message_id}, file)
 
     except Exception as error:
-        print("❌ Could not save Discord message ID:")
-        print(repr(error))
+        print("❌ Could not save Discord message ID:", repr(error))
 
 
 # ============================================================
@@ -98,7 +92,11 @@ def check_key(req):
 
 
 def account_is_online(account):
-    last_seen = float(account.get("lastSeen", 0))
+    try:
+        last_seen = float(account.get("lastSeen", 0))
+    except (TypeError, ValueError):
+        return False
+
     return (time.time() - last_seen) <= HEARTBEAT_TIMEOUT
 
 
@@ -128,28 +126,13 @@ def format_money(value):
         return escape(str(value))
 
 
-def format_rate(value):
+def format_speed(value):
     if value is None or value == "":
         return "—"
 
     try:
-        number = float(value)
-
-        suffixes = [
-            (1e18, "Qi/s"),
-            (1e15, "Qa/s"),
-            (1e12, "T/s"),
-            (1e9, "B/s"),
-            (1e6, "M/s"),
-            (1e3, "K/s"),
-        ]
-
-        for divisor, suffix in suffixes:
-            if abs(number) >= divisor:
-                return f"{number / divisor:.2f}{suffix}"
-
-        return f"{number:,.0f}/s"
-
+        speed = float(value)
+        return f"{speed:.2f} WS"
     except (TypeError, ValueError):
         return escape(str(value))
 
@@ -209,9 +192,19 @@ def dashboard_text():
 
         name = account.get("playerName") or account.get("userId")
         eggs = int(account.get("eggs", 0))
+        money = format_money(account.get("money"))
+        speed = format_speed(account.get("speed", account.get("rate")))
+        pets = account.get("pets")
+
+        if pets is None:
+            pets = "—"
 
         lines.append(
-            f"{icon} **{name}** — 🥚 **{eggs:,}**"
+            f"{icon} **{name}** — "
+            f"💰 **{money}** | "
+            f"⚡ **{speed}** | "
+            f"🐾 **{pets}** | "
+            f"🥚 **{eggs:,}**"
         )
 
     if not lines:
@@ -296,8 +289,7 @@ def update_discord():
             print("❌ Discord POST error:", response.text[:1000])
 
     except Exception as error:
-        print("❌ Discord connection error:")
-        print(repr(error))
+        print("❌ Discord connection error:", repr(error))
 
 
 def monitor_loop():
@@ -329,7 +321,6 @@ def home():
 :root{
     --bg:#08090c;
     --panel:#101216;
-    --panel2:#14161b;
     --line:#242730;
     --text:#f4f5f7;
     --muted:#858a96;
@@ -446,10 +437,14 @@ h1{
     box-shadow:0 18px 50px rgba(0,0,0,.2);
 }
 
+.table-scroll{
+    overflow-x:auto;
+}
+
 .table-head,
 .account{
     display:grid;
-    grid-template-columns:minmax(210px,2.2fr) 120px 150px 150px 80px 80px 120px;
+    grid-template-columns:minmax(210px,2.2fr) 120px 150px 120px 80px 80px 120px;
     align-items:center;
     min-width:900px;
 }
@@ -552,7 +547,7 @@ h1{
     color:#e6e8ec;
 }
 
-.rate{
+.speed{
     color:var(--orange);
     font-weight:700;
 }
@@ -586,7 +581,6 @@ h1{
     .stats{grid-template-columns:1fr}
     .header{align-items:flex-start}
     .live{display:none}
-    .table{overflow-x:auto}
 }
 </style>
 </head>
@@ -625,18 +619,20 @@ h1{
     </div>
 
     <div class="table">
-        <div class="table-head">
-            <div>ACCOUNT</div>
-            <div>STATUS</div>
-            <div>MONEY</div>
-            <div>RATE</div>
-            <div>EGGS</div>
-            <div>PETS</div>
-            <div>LAST SEEN</div>
-        </div>
+        <div class="table-scroll">
+            <div class="table-head">
+                <div>ACCOUNT</div>
+                <div>STATUS</div>
+                <div>MONEY</div>
+                <div>SPEED</div>
+                <div>EGGS</div>
+                <div>PETS</div>
+                <div>LAST SEEN</div>
+            </div>
 
-        <div id="accounts">
-            <div class="empty">Loading accounts...</div>
+            <div id="accounts">
+                <div class="empty">Loading accounts...</div>
+            </div>
         </div>
 
         <div class="footer">
@@ -658,12 +654,37 @@ function esc(value){
 
 function renderMoney(value){
     if(value === null || value === undefined || value === "") return "—";
-    return esc(value);
+
+    const number = Number(value);
+
+    if(!Number.isFinite(number)) return esc(value);
+
+    const suffixes = [
+        [1e18, "Qi"],
+        [1e15, "Qa"],
+        [1e12, "T"],
+        [1e9, "B"],
+        [1e6, "M"],
+        [1e3, "K"]
+    ];
+
+    for(const [divisor, suffix] of suffixes){
+        if(Math.abs(number) >= divisor){
+            return "$" + (number / divisor).toFixed(2) + suffix;
+        }
+    }
+
+    return "$" + number.toLocaleString();
 }
 
-function renderRate(value){
+function renderSpeed(value){
     if(value === null || value === undefined || value === "") return "—";
-    return esc(value);
+
+    const speed = Number(value);
+
+    if(!Number.isFinite(speed)) return "—";
+
+    return speed.toFixed(2) + " WS";
 }
 
 function renderAccounts(data){
@@ -680,7 +701,11 @@ function renderAccounts(data){
 
     root.innerHTML = data.accounts.map(account => {
         const online = account.online;
-        const initial = esc((account.playerName || account.userId || "?").charAt(0).toUpperCase());
+        const initial = esc(
+            (account.playerName || account.userId || "?")
+            .charAt(0)
+            .toUpperCase()
+        );
 
         return `
         <div class="account">
@@ -700,7 +725,7 @@ function renderAccounts(data){
             </div>
 
             <div class="money">${renderMoney(account.money)}</div>
-            <div class="rate">${renderRate(account.rate)}</div>
+            <div class="speed">${renderSpeed(account.speed)}</div>
             <div class="number">${Number(account.eggs || 0).toLocaleString()}</div>
             <div class="number">${account.pets ?? "—"}</div>
             <div class="age">${esc(account.lastSeenText || "—")}</div>
@@ -732,13 +757,12 @@ setInterval(refresh, 2000);
 
 
 # ============================================================
-# API FOR LIVE WEBSITE
+# API
 # ============================================================
 
 @app.get("/api/accounts")
 def api_accounts():
     items = get_accounts_snapshot()
-
     result = []
 
     for account in sorted(
@@ -747,6 +771,12 @@ def api_accounts():
     ):
         online = account_is_online(account)
 
+        # "speed" is the new name. "rate" is kept as a legacy fallback
+        # so old stored account data doesn't suddenly disappear.
+        speed = account.get("speed")
+        if speed is None:
+            speed = account.get("rate")
+
         result.append({
             "userId": account.get("userId", ""),
             "playerName": account.get("playerName", ""),
@@ -754,10 +784,12 @@ def api_accounts():
             "online": online,
             "eggs": int(account.get("eggs", 0)),
             "money": account.get("money"),
-            "rate": account.get("rate"),
+            "speed": speed,
             "pets": account.get("pets"),
             "lastSeenText": format_age(
-                time.time() - float(account.get("lastSeen", time.time()))
+                time.time() - float(
+                    account.get("lastSeen", time.time())
+                )
             )
         })
 
@@ -798,6 +830,7 @@ def health():
 def heartbeat():
     if not check_key(request):
         print("❌ Unauthorized heartbeat request")
+
         return jsonify({
             "ok": False,
             "error": "Unauthorized"
@@ -826,11 +859,14 @@ def heartbeat():
     except (TypeError, ValueError):
         eggs = 0
 
-    # Optional fields.
-    # Existing scripts can keep sending only eggs.
-    # Newer scripts can send money/rate/pets later.
+    # New monitor values.
     money = data.get("money")
-    rate = data.get("rate")
+    speed = data.get("speed")
+
+    # Accept "rate" too so the current Lua version can still work.
+    if speed is None:
+        speed = data.get("rate")
+
     pets = data.get("pets")
 
     with state_lock:
@@ -841,13 +877,39 @@ def heartbeat():
             "playerName": player_name,
             "displayName": display_name,
             "eggs": eggs,
-            "money": money if money is not None else old.get("money"),
-            "rate": rate if rate is not None else old.get("rate"),
-            "pets": pets if pets is not None else old.get("pets"),
+
+            # Preserve the last known values when an older client
+            # doesn't send the optional fields.
+            "money": (
+                money
+                if money is not None
+                else old.get("money")
+            ),
+
+            "speed": (
+                speed
+                if speed is not None
+                else old.get("speed", old.get("rate"))
+            ),
+
+            "pets": (
+                pets
+                if pets is not None
+                else old.get("pets")
+            ),
+
             "lastSeen": time.time()
         }
 
     save_accounts()
+
+    print(
+        f"📡 Heartbeat: {player_name} | "
+        f"🥚 {eggs} | "
+        f"💰 {money} | "
+        f"⚡ {speed} WS | "
+        f"🐾 {pets}"
+    )
 
     threading.Thread(
         target=update_discord,
