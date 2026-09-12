@@ -548,6 +548,12 @@ h1{
     font-size:12px;
 }
 
+.multiplier{
+    color:#00ff00;
+    font-weight:800;
+    margin-left:5px;
+}
+
 .empty{
     padding:70px 20px;
     text-align:center;
@@ -643,9 +649,35 @@ function renderMoney(value){
 }
 
 function renderRate(value){
-    if(value === null || value === undefined || value === "") return "—";
+    if(value === null || value === undefined || value === "") {
+        return "—";
+    }
 
-    return esc(value);
+    const text = String(value);
+
+    // Convert:
+    // 2B <font color="#00FF00">(x16)</font>
+    // into safe HTML with a green multiplier.
+    const match = text.match(
+        /^(.*?)\s*<font[^>]*>\s*(\(x\d+\))\s*<\/font>\s*$/i
+    );
+
+    if(match){
+        const amount = match[1].trim();
+        const multiplier = match[2];
+
+        return `
+            ${esc(amount)}
+            <span class="multiplier">${esc(multiplier)}</span>
+        `;
+    }
+
+    // Remove unsupported font tags if the format is slightly different.
+    const cleaned = text
+        .replace(/<font[^>]*>/gi, "")
+        .replace(/<\/font>/gi, "");
+
+    return esc(cleaned);
 }
 
 function renderAccounts(data){
