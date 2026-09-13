@@ -13,7 +13,7 @@ local Scripts = {
     },
 
     --// 🌱 GROW A GARDEN 2
-    [126987765280963] = {
+    [97598239454123] = {
         "https://raw.githubusercontent.com/KienOdjoy1/gag2/refs/heads/main/wgag2.lua"
     }
 
