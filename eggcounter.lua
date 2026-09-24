@@ -31,7 +31,7 @@ end)
 -- SETTINGS
 --==============================================================--
 
-local MONITOR_URL = "https://gag2-1.onrender.com"
+local MONITOR_URL = "https://khscript.onrender.com/"
 local MONITOR_API_KEY = "KYOSH-12162006"
 
 local HEARTBEAT_INTERVAL = 10
