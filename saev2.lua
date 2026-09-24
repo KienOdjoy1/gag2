@@ -32,8 +32,11 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "EggFPSMonitor"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
+
+-- Respect the phone safe-area/top bar instead of occupying the whole screen.
+ScreenGui.IgnoreGuiInset = false
 ScreenGui.DisplayOrder = 999
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
 --//============================================================//
@@ -42,11 +45,19 @@ ScreenGui.Parent = PlayerGui
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.new(0,370,0,445)
-Main.Position = UDim2.new(0.5,-185,0.5,-227)
+
+-- Keep one base layout and scale the complete panel.
+-- This makes every existing button/text element resize together.
+local BASE_WIDTH = 370
+local BASE_HEIGHT = 445
+
+Main.Size = UDim2.fromOffset(BASE_WIDTH,BASE_HEIGHT)
+Main.AnchorPoint = Vector2.new(0.5,0.5)
+Main.Position = UDim2.fromScale(0.5,0.5)
 Main.BackgroundColor3 = Color3.fromRGB(13,14,19)
 Main.BorderSizePixel = 0
 Main.Active = true
+Main.ClipsDescendants = false
 Main.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -67,32 +78,80 @@ MainGradient.Color = ColorSequence.new({
 MainGradient.Rotation = 90
 MainGradient.Parent = Main
 
---// Responsive scale for phones/tablets
+--//============================================================//
+--// RESPONSIVE UI
+--//============================================================//
+
 local UIScale = Instance.new("UIScale")
-UIScale.Scale = 1
+UIScale.Scale = 0.88
 UIScale.Parent = Main
+
+local ResponsiveConnection = nil
 
 local function UpdateResponsiveScale()
     local Camera = workspace.CurrentCamera
-    if not Camera then return end
-
-    local Viewport = Camera.ViewportSize
-    local Scale = 1
-
-    if Viewport.X < 500 then
-        Scale = math.clamp((Viewport.X - 24) / 370,0.72,1)
-    elseif Viewport.Y < 520 then
-        Scale = math.clamp((Viewport.Y - 24) / 455,0.72,1)
+    if not Camera then
+        return
     end
 
+    local Viewport = Camera.ViewportSize
+    if Viewport.X <= 0 or Viewport.Y <= 0 then
+        return
+    end
+
+    -- Leave a visible margin around the panel.
+    local HorizontalMargin = UserInputService.TouchEnabled and 30 or 50
+    local VerticalMargin = UserInputService.TouchEnabled and 55 or 50
+
+    local FitX =
+        (Viewport.X - HorizontalMargin) / BASE_WIDTH
+
+    local FitY =
+        (Viewport.Y - VerticalMargin) / BASE_HEIGHT
+
+    local Scale = math.min(FitX,FitY)
+
+    if UserInputService.TouchEnabled then
+        -- Phones/tablets: deliberately smaller than the available screen.
+        Scale = math.min(Scale,0.84)
+    else
+        -- PC: keep the panel compact instead of letting it grow.
+        Scale = math.min(Scale,0.92)
+    end
+
+    Scale = math.clamp(Scale,0.60,0.92)
+
     UIScale.Scale = Scale
+
+    -- Re-center after rotation/resizing.
+    Main.AnchorPoint = Vector2.new(0.5,0.5)
+    Main.Position = UDim2.fromScale(0.5,0.5)
+
 end
 
 UpdateResponsiveScale()
 
-if workspace.CurrentCamera then
-    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateResponsiveScale)
+local function ConnectViewport()
+    if ResponsiveConnection then
+        ResponsiveConnection:Disconnect()
+        ResponsiveConnection = nil
+    end
+
+    local Camera = workspace.CurrentCamera
+    if Camera then
+        ResponsiveConnection =
+            Camera:GetPropertyChangedSignal("ViewportSize"):Connect(
+                UpdateResponsiveScale
+            )
+    end
 end
+
+ConnectViewport()
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    ConnectViewport()
+    task.defer(UpdateResponsiveScale)
+end)
 
 --//============================================================//
 --// HEADER
@@ -489,6 +548,16 @@ MiniButton.Visible = false
 MiniButton.Active = true
 MiniButton.Parent = ScreenGui
 
+-- Smaller floating button on phones so it does not dominate the screen.
+if UserInputService.TouchEnabled then
+    MiniButton.Size = UDim2.fromOffset(52,52)
+    MiniButton.TextSize = 25
+    MiniButton.Position = UDim2.new(0,14,1,-66)
+else
+    MiniButton.Size = UDim2.fromOffset(58,58)
+    MiniButton.Position = UDim2.new(0,18,1,-76)
+end
+
 local MiniCorner = Instance.new("UICorner")
 MiniCorner.CornerRadius = UDim.new(0,17)
 MiniCorner.Parent = MiniButton
@@ -528,9 +597,47 @@ local function MakeDraggable(Object,Handle)
     local DragStart = nil
     local StartPosition = nil
 
+    local function ClampToViewport()
+        local Camera = workspace.CurrentCamera
+        if not Camera then
+            return
+        end
+
+        local Viewport = Camera.ViewportSize
+        local Size = Object.AbsoluteSize
+        local Anchor = Object.AnchorPoint
+
+        local MinX =
+            (Size.X * Anchor.X) + 8
+
+        local MaxX =
+            Viewport.X - (Size.X * (1 - Anchor.X)) - 8
+
+        local MinY =
+            (Size.Y * Anchor.Y) + 8
+
+        local MaxY =
+            Viewport.Y - (Size.Y * (1 - Anchor.Y)) - 8
+
+        local X = math.clamp(
+            Object.AbsolutePosition.X + (Size.X * Anchor.X),
+            MinX,
+            math.max(MinX,MaxX)
+        )
+
+        local Y = math.clamp(
+            Object.AbsolutePosition.Y + (Size.Y * Anchor.Y),
+            MinY,
+            math.max(MinY,MaxY)
+        )
+
+        Object.Position = UDim2.fromOffset(X,Y)
+    end
+
     Handle.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1
         or Input.UserInputType == Enum.UserInputType.Touch then
+
             Dragging = true
             DragStart = Input.Position
             StartPosition = Object.Position
@@ -538,15 +645,21 @@ local function MakeDraggable(Object,Handle)
             Input.Changed:Connect(function()
                 if Input.UserInputState == Enum.UserInputState.End then
                     Dragging = false
+                    ClampToViewport()
                 end
             end)
         end
     end)
 
     UserInputService.InputChanged:Connect(function(Input)
-        if not Dragging then return end
+        if not Dragging then
+            return
+        end
+
         if Input.UserInputType ~= Enum.UserInputType.MouseMovement
-        and Input.UserInputType ~= Enum.UserInputType.Touch then return end
+        and Input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
 
         local Delta = Input.Position - DragStart
 
@@ -1036,7 +1149,10 @@ local FLOAT_MAX_VERTICAL_SPEED = 15
 local function StopFloat()
 
     if FloatConnection then
-        FloatConnection:Disconnect()
+        pcall(function()
+            task.cancel(FloatConnection)
+        end)
+
         FloatConnection = nil
     end
 end
@@ -1066,62 +1182,58 @@ local function StartFloat()
     StopFloat()
 
     FloatConnection =
-        RunService.Heartbeat:Connect(function()
+        task.spawn(function()
 
-            if not FloatEnabled then
-                return
+            while FloatEnabled and ScreenGui.Parent do
+
+                local Character = Player.Character
+
+                if Character then
+                    local Humanoid =
+                        Character:FindFirstChildOfClass("Humanoid")
+
+                    local Root =
+                        Character:FindFirstChild("HumanoidRootPart")
+
+                    if Humanoid and Root then
+                        local Ground =
+                            FindGround(Character,Root)
+
+                        if Ground then
+                            local RootHalfHeight =
+                                math.max(Root.Size.Y * 1,1)
+
+                            local TargetY =
+                                Ground.Position.Y +
+                                RootHalfHeight +
+                                FloatHeight
+
+                            local Difference =
+                                TargetY - Root.Position.Y
+
+                            local VerticalVelocity =
+                                math.clamp(
+                                    Difference * FLOAT_STRENGTH,
+                                    -FLOAT_MAX_VERTICAL_SPEED,
+                                    FLOAT_MAX_VERTICAL_SPEED
+                                )
+
+                            local CurrentVelocity =
+                                Root.AssemblyLinearVelocity
+
+                            Root.AssemblyLinearVelocity =
+                                Vector3.new(
+                                    CurrentVelocity.X,
+                                    VerticalVelocity,
+                                    CurrentVelocity.Z
+                                )
+                        end
+                    end
+                end
+
+                -- 30 Hz is enough for floating and avoids a raycast every frame.
+                task.wait(0.033)
             end
-
-            local Character = Player.Character
-
-            if not Character then
-                return
-            end
-
-            local Humanoid =
-                Character:FindFirstChildOfClass("Humanoid")
-
-            local Root =
-                Character:FindFirstChild("HumanoidRootPart")
-
-            if not Humanoid or not Root then
-                return
-            end
-
-            local Ground =
-                FindGround(Character,Root)
-
-            if not Ground then
-                return
-            end
-
-            local RootHalfHeight =
-                math.max(Root.Size.Y * 1,1)
-
-            local TargetY =
-                Ground.Position.Y +
-                RootHalfHeight +
-                FloatHeight
-
-            local Difference =
-                TargetY - Root.Position.Y
-
-            local VerticalVelocity =
-                math.clamp(
-                    Difference * FLOAT_STRENGTH,
-                    -FLOAT_MAX_VERTICAL_SPEED,
-                    FLOAT_MAX_VERTICAL_SPEED
-                )
-
-            local CurrentVelocity =
-                Root.AssemblyLinearVelocity
-
-            Root.AssemblyLinearVelocity =
-                Vector3.new(
-                    CurrentVelocity.X,
-                    VerticalVelocity,
-                    CurrentVelocity.Z
-                )
 
         end)
 end
@@ -1167,11 +1279,13 @@ FloatButton.MouseButton1Click:Connect(function()
 end)
 
 --//============================================================//
---// FPS BOOST — ONE-WAY / NO RESTORE
+--// FPS BOOST — LOW-OVERHEAD / ONE-WAY
 --//============================================================//
 
 local FPSBoostEnabled = false
 
+-- These folders are visual-only containers in the place.
+-- They are optimized instead of repeatedly destroyed/recreated.
 local RenderFolderNames = {
     ["ClientRenderedAssets"] = true,
     ["PlacedEggRenders"] = true,
@@ -1185,10 +1299,24 @@ local ObjectFolderNames = {
     ["MACHINES"] = true
 }
 
+-- Objects that must remain visible because they are part of plot/gameplay.
+local KeepPlotObjectsVisible = {
+    ["TreadmillBottom"] = true,
+    ["TreadmillUpgrade"] = true,
+    ["PlotUpgrade"] = true,
+    ["Multiplier"] = true
+}
+
+local ProcessedVisuals = setmetatable({}, {__mode = "k"})
+local PendingVisuals = {}
+local PendingVisualSet = setmetatable({}, {__mode = "k"})
+local PendingHead = 1
+local VisualQueueRunning = false
+
 local function IsPlayerCharacter(Object)
     local Character = Player.Character
 
-    if not Character then
+    if not Character or not Object then
         return false
     end
 
@@ -1207,92 +1335,63 @@ local function IsObjectFolder(Object)
         and ObjectFolderNames[Object.Name] == true
 end
 
-local function RemoveRenderFolder(Object)
-    if not Object or not IsRenderFolder(Object) then
-        return
-    end
-
-    pcall(function()
-        Object:Destroy()
-    end)
-end
-
-local function RemoveRenderFolders()
-    for _,Object in ipairs(workspace:GetDescendants()) do
-        if IsRenderFolder(Object) then
-            RemoveRenderFolder(Object)
-        end
-    end
-end
-
-local function RemoveObjectFolder(Object)
-    if not IsObjectFolder(Object) then
-        return
-    end
-
-    pcall(function()
-        Object:Destroy()
-    end)
-end
-
-local function RemoveObjectFolders()
-    local ObjectsFolder = workspace:FindFirstChild("__OBJECTS")
-
-    if not ObjectsFolder then
-        return
-    end
-
-    for _,Object in ipairs(ObjectsFolder:GetChildren()) do
-        if ObjectFolderNames[Object.Name] then
-            RemoveObjectFolder(Object)
-        end
-    end
-end
-
---------------------------------------------------
---// PLOT OBJECTS THAT MUST STAY VISIBLE
---------------------------------------------------
-
-local KeepPlotObjectsVisible = {
-    ["TreadmillBottom"] = true,
-    ["TreadmillUpgrade"] = true,
-    ["PlotUpgrade"] = true,
-    ["Multiplier"] = true
-}
-
-local function IsKeepPlotObject(Object)
-
+local function IsTreadmillRender(Object)
     if not Object then
         return false
     end
 
-    -- Object itself
-    if KeepPlotObjectsVisible[Object.Name] then
+    if Object.Name == "__ClientTreadmillRenders" then
         return true
     end
 
-    -- Anything inside the protected object
     local Current = Object.Parent
+    local Depth = 0
 
-    while Current and Current ~= workspace do
-
-        if KeepPlotObjectsVisible[Current.Name] then
+    while Current and Current ~= workspace and Depth < 8 do
+        if Current.Name == "__ClientTreadmillRenders" then
             return true
         end
 
         Current = Current.Parent
+        Depth += 1
     end
 
     return false
 end
 
-local function RemoveVisualObject(Object)
+local function IsKeepPlotObject(Object)
+    if not Object then
+        return false
+    end
 
-    if not Object or IsPlayerCharacter(Object) then
+    if KeepPlotObjectsVisible[Object.Name] then
+        return true
+    end
+
+    local Current = Object.Parent
+    local Depth = 0
+
+    while Current and Current ~= workspace and Depth < 12 do
+        if KeepPlotObjectsVisible[Current.Name] then
+            return true
+        end
+
+        Current = Current.Parent
+        Depth += 1
+    end
+
+    return false
+end
+
+local function HideVisual(Object)
+    if not Object or not Object.Parent then
         return
     end
 
-    -- NEVER modify the important plot objects
+    if IsPlayerCharacter(Object) then
+        return
+    end
+
     if IsKeepPlotObject(Object) then
         if Object:IsA("BasePart") then
             pcall(function()
@@ -1304,8 +1403,67 @@ local function RemoveVisualObject(Object)
         return
     end
 
-    -- Remove heavy visual effects
+    -- Keep interaction/prompts/models alive. Only remove rendering work.
     if Object:IsA("ParticleEmitter")
+        or Object:IsA("Trail")
+        or Object:IsA("Beam")
+        or Object:IsA("Fire")
+        or Object:IsA("Smoke")
+        or Object:IsA("Sparkles")
+    then
+        pcall(function()
+            Object.Enabled = false
+        end)
+
+        ProcessedVisuals[Object] = true
+        return
+    end
+
+    if Object:IsA("PostEffect") then
+        pcall(function()
+            Object.Enabled = false
+        end)
+
+        ProcessedVisuals[Object] = true
+        return
+    end
+
+    if Object:IsA("Decal") or Object:IsA("Texture") then
+        pcall(function()
+            Object.Transparency = 1
+        end)
+
+        ProcessedVisuals[Object] = true
+        return
+    end
+
+    if Object:IsA("SurfaceAppearance") then
+        pcall(function()
+            Object:Destroy()
+        end)
+
+        ProcessedVisuals[Object] = true
+        return
+    end
+
+    if Object:IsA("BasePart") then
+        pcall(function()
+            Object.LocalTransparencyModifier = 1
+            Object.CastShadow = false
+            Object.Reflectance = 0
+        end)
+
+        ProcessedVisuals[Object] = true
+    end
+end
+
+local function IsVisualCandidate(Object)
+    if not Object then
+        return false
+    end
+
+    return Object:IsA("BasePart")
+        or Object:IsA("ParticleEmitter")
         or Object:IsA("Trail")
         or Object:IsA("Beam")
         or Object:IsA("Fire")
@@ -1315,22 +1473,84 @@ local function RemoveVisualObject(Object)
         or Object:IsA("Decal")
         or Object:IsA("Texture")
         or Object:IsA("SurfaceAppearance")
+end
+
+local function QueueVisual(Object)
+    if not FPSBoostEnabled
+        or not Object
+        or not Object.Parent
+        or ProcessedVisuals[Object]
+        or PendingVisualSet[Object]
     then
-
-        pcall(function()
-            Object:Destroy()
-        end)
-
         return
     end
 
-    -- Hide other unnecessary geometry
-    if Object:IsA("BasePart") then
-        pcall(function()
-            Object.LocalTransparencyModifier = 1
-            Object.CastShadow = false
-            Object.Reflectance = 0
-        end)
+    if IsPlayerCharacter(Object) or not IsVisualCandidate(Object) then
+        return
+    end
+
+    PendingVisualSet[Object] = true
+    PendingVisuals[#PendingVisuals + 1] = Object
+end
+
+local function StartVisualQueue()
+    if VisualQueueRunning then
+        return
+    end
+
+    VisualQueueRunning = true
+
+    task.spawn(function()
+        while FPSBoostEnabled and ScreenGui.Parent do
+            -- A small budget prevents treadmill spawning from freezing the frame.
+            local Budget = 80
+            local Processed = 0
+
+            while Processed < Budget and PendingHead <= #PendingVisuals do
+                local Object = PendingVisuals[PendingHead]
+                PendingVisuals[PendingHead] = nil
+                PendingHead += 1
+
+                PendingVisualSet[Object] = nil
+
+                if Object and Object.Parent then
+                    -- Keep plot controls/interactions alive, including
+                    -- TreadmillBottom and TreadmillUpgrade.
+                    HideVisual(Object)
+                end
+
+                Processed += 1
+            end
+
+            -- Reset the queue without shifting thousands of array entries.
+            if PendingHead > #PendingVisuals then
+                table.clear(PendingVisuals)
+                PendingHead = 1
+            end
+
+            -- 30 ms pause keeps the optimizer from competing with rendering.
+            task.wait(0.03)
+        end
+
+        table.clear(PendingVisuals)
+        table.clear(PendingVisualSet)
+        PendingHead = 1
+        VisualQueueRunning = false
+    end)
+end
+
+local function QueueExistingVisuals()
+    -- One initial pass only. Future objects are handled by DescendantAdded.
+    for _, Object in ipairs(workspace:GetDescendants()) do
+        if IsRenderFolder(Object) then
+            -- Keep the container. Its children are queued below.
+        elseif IsObjectFolder(Object) then
+            pcall(function()
+                Object:Destroy()
+            end)
+        elseif not IsPlayerCharacter(Object) and IsVisualCandidate(Object) then
+            QueueVisual(Object)
+        end
     end
 end
 
@@ -1351,31 +1571,21 @@ local function ApplyFPSBoost()
         Lighting.FogEnd = 1000000
     end)
 
-    -- Delete known heavy render/object containers locally.
-    RemoveRenderFolders()
-    RemoveObjectFolders()
-
-    -- Remove/hide everything that is safe to optimize locally.
-    for _,Object in ipairs(workspace:GetDescendants()) do
-        if IsRenderFolder(Object) then
-            RemoveRenderFolder(Object)
-        elseif IsObjectFolder(Object) then
-            RemoveObjectFolder(Object)
-        else
-            RemoveVisualObject(Object)
-        end
-    end
-
-    -- Also remove post-processing effects currently under Lighting.
-    for _,Object in ipairs(Lighting:GetChildren()) do
+    -- Disable post effects without repeatedly creating/destroying them.
+    for _, Object in ipairs(Lighting:GetChildren()) do
         if Object:IsA("PostEffect") then
             pcall(function()
-                Object:Destroy()
+                Object.Enabled = false
             end)
         end
     end
 
-    StatusLabel.Text = "● FPS BOOST ACTIVE — NO RESTORE"
+    -- Start the queue before scanning so large treadmill folders are
+    -- processed over multiple small budgets instead of one long frame.
+    StartVisualQueue()
+    QueueExistingVisuals()
+
+    StatusLabel.Text = "● FPS BOOST ACTIVE — LOW OVERHEAD"
     StatusLabel.TextColor3 =
         Color3.fromRGB(100,255,130)
 end
@@ -1387,7 +1597,7 @@ FPSBoostButton.MouseButton1Click:Connect(function()
 end)
 
 --//============================================================//
---// FPS BOOST — NEW OBJECT DETECTION
+--// FPS BOOST — LOW-COST NEW OBJECT DETECTION
 --//============================================================//
 
 workspace.DescendantAdded:Connect(function(Object)
@@ -1395,30 +1605,29 @@ workspace.DescendantAdded:Connect(function(Object)
         return
     end
 
-    task.defer(function()
-        if not FPSBoostEnabled or not Object.Parent then
-            return
-        end
+    -- Do not spawn a new task for every treadmill part.
+    QueueVisual(Object)
+end)
 
-        -- Check the object and its ancestors for known render containers.
-        local Current = Object
+workspace.DescendantRemoving:Connect(function(Object)
+    -- If a treadmill/render object is removed and later reused, allow it
+    -- to be optimized again.
+    ProcessedVisuals[Object] = nil
+    PendingVisualSet[Object] = nil
+end)
 
-        while Current and Current ~= workspace do
-            if IsRenderFolder(Current) then
-                RemoveRenderFolder(Current)
-                return
-            end
+-- Newly-added lighting effects are also disabled without destroying
+-- their containers.
+Lighting.ChildAdded:Connect(function(Object)
+    if not FPSBoostEnabled then
+        return
+    end
 
-            if IsObjectFolder(Current) then
-                RemoveObjectFolder(Current)
-                return
-            end
-
-            Current = Current.Parent
-        end
-
-        RemoveVisualObject(Object)
-    end)
+    if Object:IsA("PostEffect") then
+        pcall(function()
+            Object.Enabled = false
+        end)
+    end
 end)
 
 --//============================================================//
@@ -1519,7 +1728,20 @@ local function EquipBat()
     return nil
 end
 
+local CachedBatTarget = nil
+local LastTargetScan = 0
+local TARGET_SCAN_INTERVAL = 0.08
+
 local function GetNearbyTarget()
+
+    local Now = os.clock()
+
+    if Now - LastTargetScan < TARGET_SCAN_INTERVAL then
+        return CachedBatTarget
+    end
+
+    LastTargetScan = Now
+    CachedBatTarget = nil
 
     local Character = Player.Character
 
@@ -1534,7 +1756,6 @@ local function GetNearbyTarget()
         return nil
     end
 
-    local ClosestTarget = nil
     local ClosestDistance = BatDetectionDistance
 
     for _,OtherPlayer in ipairs(Players:GetPlayers()) do
@@ -1547,14 +1768,10 @@ local function GetNearbyTarget()
             if TargetCharacter then
 
                 local TargetHumanoid =
-                    TargetCharacter:FindFirstChildOfClass(
-                        "Humanoid"
-                    )
+                    TargetCharacter:FindFirstChildOfClass("Humanoid")
 
                 local TargetRoot =
-                    TargetCharacter:FindFirstChild(
-                        "HumanoidRootPart"
-                    )
+                    TargetCharacter:FindFirstChild("HumanoidRootPart")
 
                 if TargetHumanoid
                     and TargetRoot
@@ -1568,17 +1785,15 @@ local function GetNearbyTarget()
                         ).Magnitude
 
                     if Distance <= ClosestDistance then
-
                         ClosestDistance = Distance
-                        ClosestTarget = TargetCharacter
-
+                        CachedBatTarget = TargetCharacter
                     end
                 end
             end
         end
     end
 
-    return ClosestTarget
+    return CachedBatTarget
 end
 
 local function ActivateBat()
@@ -1651,7 +1866,8 @@ task.spawn(function()
 
     while ScreenGui.Parent do
 
-        task.wait(0.01)
+        -- Avoid a 100 Hz player scan. Target lookup itself is cached.
+        task.wait(0.03)
 
         if BatAutoEnabled then
             ActivateBat()
@@ -1973,10 +2189,11 @@ local SavedMaxZoomDistance = nil
 local function StartFarCamera()
 
     if FarCameraConnection then
+        pcall(function()
+            task.cancel(FarCameraConnection)
+        end)
 
-        FarCameraConnection:Disconnect()
         FarCameraConnection = nil
-
     end
 
     local Camera =
@@ -2001,46 +2218,43 @@ local function StartFarCamera()
     Player.CameraMode =
         Enum.CameraMode.Classic
 
+    -- Camera zoom does not need to be rewritten every rendered frame.
     FarCameraConnection =
-        RunService.RenderStepped:Connect(function()
+        task.spawn(function()
+            while FarCameraEnabled and ScreenGui.Parent do
 
-            if not FarCameraEnabled then
-                return
+                Player.CameraMode =
+                    Enum.CameraMode.Classic
+
+                Player.CameraMinZoomDistance =
+                    FarCameraDistance
+
+                Player.CameraMaxZoomDistance =
+                    FarCameraDistance
+
+                task.wait(0.15)
             end
-
-            Player.CameraMode =
-                Enum.CameraMode.Classic
-
-            Player.CameraMinZoomDistance =
-                FarCameraDistance
-
-            Player.CameraMaxZoomDistance =
-                FarCameraDistance
-
         end)
 end
 
 local function StopFarCamera()
 
     if FarCameraConnection then
+        pcall(function()
+            task.cancel(FarCameraConnection)
+        end)
 
-        FarCameraConnection:Disconnect()
         FarCameraConnection = nil
-
     end
 
     if SavedMinZoomDistance ~= nil then
-
         Player.CameraMinZoomDistance =
             SavedMinZoomDistance
-
     end
 
     if SavedMaxZoomDistance ~= nil then
-
         Player.CameraMaxZoomDistance =
             SavedMaxZoomDistance
-
     end
 
     SavedMinZoomDistance = nil
