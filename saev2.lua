@@ -522,6 +522,7 @@ local BatAutoButton = MakeButton("BatAutoButton","  BAT AUTO",UDim2.new(0.52,0,0
 local FarCameraButton = MakeButton("FarCameraButton","  FAR CAMERA",UDim2.new(0,0,0,200),true)
 local BatVisualButton = MakeButton("BatVisualButton","  BAT VISUAL: OFF",UDim2.new(0.52,0,0,200))
 local AntiRagdollButton = MakeButton("AntiRagdollButton","  ANTI RAGDOLL",UDim2.new(0,0,0,249), true)
+local AutoTrapButton = MakeButton("AutoTrapButton","  AUTO TRAP: FOREST",UDim2.new(0.52,0,0,249), true)
 
 SetToggleVisual(GodModeButton,false)
 SetToggleVisual(FPSBoostButton,false)
@@ -529,6 +530,7 @@ SetToggleVisual(FloatButton,false)
 SetToggleVisual(BatAutoButton,false)
 SetToggleVisual(FarCameraButton,false)
 SetToggleVisual(AntiRagdollButton,false)
+SetToggleVisual(AutoTrapButton,false)
 
 --//============================================================//
 --// MOBILE MINIMIZED BUTTON
@@ -1383,12 +1385,52 @@ local function IsKeepPlotObject(Object)
     return false
 end
 
+local function IsTrapObject(Object)
+    if not Object then
+        return false
+    end
+
+    local Current = Object
+    local Depth = 0
+
+    while Current and Current ~= workspace and Depth < 12 do
+        local Name = string.lower(Current.Name or "")
+
+        if Name:find("trap",1,true) then
+            return true
+        end
+
+        if Current:IsA("Tool") then
+            local GearName = Current:GetAttribute("GearName")
+            if typeof(GearName) == "string" and string.lower(GearName):find("trap",1,true) then
+                return true
+            end
+        end
+
+        Current = Current.Parent
+        Depth += 1
+    end
+
+    return false
+end
+
 local function HideVisual(Object)
     if not Object or not Object.Parent then
         return
     end
 
     if IsPlayerCharacter(Object) then
+        return
+    end
+
+    -- Never hide or destroy trap visuals/tools.
+    if IsTrapObject(Object) then
+        if Object:IsA("BasePart") then
+            pcall(function()
+                Object.LocalTransparencyModifier = 0
+                Object.CastShadow = true
+            end)
+        end
         return
     end
 
@@ -1485,7 +1527,10 @@ local function QueueVisual(Object)
         return
     end
 
-    if IsPlayerCharacter(Object) or not IsVisualCandidate(Object) then
+    if IsPlayerCharacter(Object)
+        or IsTrapObject(Object)
+        or not IsVisualCandidate(Object)
+    then
         return
     end
 
@@ -1627,6 +1672,388 @@ Lighting.ChildAdded:Connect(function(Object)
         pcall(function()
             Object.Enabled = false
         end)
+    end
+end)
+
+--//============================================================//
+--// AUTO TRAP — FOREST / FIRST 3 NESTS
+--//============================================================//
+
+local AutoTrapEnabled = false
+local AutoTrapConnection = nil
+local LastAutoTrap = 0
+local AUTO_TRAP_COOLDOWN = 1.5
+local MAX_AUTO_TRAPS = 3
+local AutoTrapBusy = false
+
+local function GetTrapTool()
+    local Character = Player.Character
+    local Backpack = Player:FindFirstChildOfClass("Backpack")
+
+    -- First: find the real trap by its name or GearName.
+    local Containers = {}
+    if Character then
+        Containers[#Containers + 1] = Character
+    end
+    if Backpack then
+        Containers[#Containers + 1] = Backpack
+    end
+
+    for _,Container in ipairs(Containers) do
+        for _,Object in ipairs(Container:GetChildren()) do
+            if Object:IsA("Tool") then
+                local Name = string.lower(Object.Name)
+                local GearName = Object:GetAttribute("GearName")
+                local GearText = typeof(GearName) == "string" and string.lower(GearName) or ""
+
+                if Name:find("trap",1,true) or GearText:find("trap",1,true) then
+                    return Object
+                end
+            end
+        end
+    end
+
+    -- Do not fall back to a hotbar slot.
+    -- If the real trap tool is gone, return nil so Auto Trap stops
+    -- instead of repeatedly selecting slot #2.
+    return nil
+end
+
+local function EquipTrapTool(TrapTool)
+    local Character = Player.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if not Character or not Humanoid or not TrapTool then
+        return false
+    end
+
+    if TrapTool.Parent ~= Character then
+        pcall(function()
+            Humanoid:EquipTool(TrapTool)
+        end)
+        task.wait(0.2)
+    end
+
+    return TrapTool.Parent == Character
+end
+
+local function GetForestModel()
+    -- Requested live layout:
+    -- Workspace > World > Areas > Guard Areas > Forest
+    local World = workspace:FindFirstChild("World")
+    if World then
+        local Areas = World:FindFirstChild("Areas")
+        if Areas then
+            local GuardAreas = Areas:FindFirstChild("Guard Areas")
+                or Areas:FindFirstChild("GuardAreas")
+            if GuardAreas then
+                local Forest = GuardAreas:FindFirstChild("Forest")
+                if Forest then
+                    return Forest
+                end
+            end
+        end
+    end
+
+    -- Fallback for the saved place layout.
+    local Objects = workspace:FindFirstChild("__OBJECTS")
+    if Objects then
+        local Areas = Objects:FindFirstChild("Areas")
+        if Areas then
+            local GuardAreas = Areas:FindFirstChild("GuardAreas")
+                or Areas:FindFirstChild("Guard Areas")
+            if GuardAreas then
+                local Forest = GuardAreas:FindFirstChild("Forest")
+                if Forest then
+                    return Forest
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function GetForestNestTargets()
+    local Forest = GetForestModel()
+    if not Forest then
+        return {}
+    end
+
+    local Nests = Forest:FindFirstChild("Nests")
+    if not Nests then
+        return {}
+    end
+
+    local Models = {}
+    for _,Object in ipairs(Nests:GetChildren()) do
+        if Object:IsA("Model") and Object.Name == "NestModel" then
+            Models[#Models + 1] = Object
+        end
+    end
+
+    -- If the game uses duplicate NestModel names, GetChildren order is
+    -- the natural order supplied by the place.
+    local Targets = {}
+    for Index = 1, math.min(MAX_AUTO_TRAPS,#Models) do
+        local Target = Models[Index]:FindFirstChild("EggSpotBottom",true)
+        if Target and Target:IsA("BasePart") then
+            Targets[#Targets + 1] = Target
+        end
+    end
+
+    return Targets
+end
+
+local function GetTrapNetwork()
+    local Success,Network,RequestPlace = pcall(function()
+        local NetworkModule = require(ReplicatedStorage.Library.Client.Network)
+        local Constants = require(ReplicatedStorage.Library.Globals.Constants)
+        return NetworkModule,Constants.NETWORK_MAP.Traps.REQUEST_PLACE
+    end)
+
+    if Success and Network and RequestPlace then
+        return Network,RequestPlace
+    end
+
+    return nil,nil
+end
+
+local function CanUseTrapNow(TrapTool)
+    -- Use the game's own safe-zone item check.
+    local Character = Player.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    if not Character or not Humanoid or not TrapTool then
+        return false
+    end
+
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Library = ReplicatedStorage:FindFirstChild("Library")
+    local Client = Library and Library:FindFirstChild("Client")
+    local GuardModule = Client and Client:FindFirstChild("ToolGameplayGuard")
+
+    if GuardModule and GuardModule:IsA("ModuleScript") then
+        local ok, Guard = pcall(require, GuardModule)
+        if ok and Guard and type(Guard.CanActivateLocal) == "function" then
+            local allowed = false
+            local checkOk = pcall(function()
+                allowed = Guard.CanActivateLocal(TrapTool)
+            end)
+            if checkOk then
+                return allowed
+            end
+        end
+    end
+
+    return true
+end
+
+local function PlaceTrapAtTarget(TrapTool,Target)
+    local Character = Player.Character
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if not Character or not Root or not Humanoid or not Target then
+        return false
+    end
+
+    -- Respect the game's safe-zone item restriction.
+    if not CanUseTrapNow(TrapTool) then
+        return false
+    end
+
+    if not EquipTrapTool(TrapTool) then
+        return false
+    end
+
+    local OldCFrame = Root.CFrame
+    local OldVelocity = Root.AssemblyLinearVelocity
+    local OldAngular = Root.AssemblyAngularVelocity
+    local TargetPosition = Target.Position
+    local Offset = 3.5
+    local StandPosition = TargetPosition - Vector3.new(0,0,Offset)
+    local Success = false
+
+    pcall(function()
+        Root.CFrame = CFrame.lookAt(StandPosition,TargetPosition)
+        Root.AssemblyLinearVelocity = Vector3.zero
+        Root.AssemblyAngularVelocity = Vector3.zero
+        task.wait(0.25)
+
+        local Network,RequestPlace = GetTrapNetwork()
+        local GearName = TrapTool:GetAttribute("GearName")
+        if typeof(GearName) ~= "string" then
+            GearName = TrapTool.Name
+        end
+
+        if Network and RequestPlace then
+            Network.Fire(RequestPlace,GearName,TargetPosition)
+            Success = true
+        else
+            TrapTool:Activate()
+            Success = true
+        end
+
+        task.wait(0.15)
+    end)
+
+    pcall(function()
+        if Root.Parent then
+            Root.CFrame = OldCFrame
+            Root.AssemblyLinearVelocity = OldVelocity
+            Root.AssemblyAngularVelocity = OldAngular
+        end
+    end)
+
+    return Success
+end
+
+local function RunAutoTrap()
+    if AutoTrapBusy then
+        return
+    end
+
+    if not AutoTrapEnabled then
+        return
+    end
+
+    if os.clock() - LastAutoTrap < AUTO_TRAP_COOLDOWN then
+        return
+    end
+
+    AutoTrapBusy = true
+
+    local Targets = GetForestNestTargets()
+    if #Targets == 0 then
+        AutoTrapBusy = false
+        StatusLabel.Text = "● AUTO TRAP: FOREST NESTS NOT FOUND"
+        StatusLabel.TextColor3 = Color3.fromRGB(255,115,115)
+        return
+    end
+
+    local TrapTool = GetTrapTool()
+    if not TrapTool then
+        AutoTrapEnabled = false
+        StatusLabel.Text = "● AUTO TRAP: NO TRAP LEFT • STOPPED"
+        StatusLabel.TextColor3 = Color3.fromRGB(255,215,80)
+        AutoTrapButton.Text = "  AUTO TRAP: NO TRAP"
+        AutoTrapButton.TextColor3 = Color3.fromRGB(255,215,80)
+        SetToggleVisual(AutoTrapButton,false)
+        AutoTrapBusy = false
+        return
+    end
+
+    -- Automatically do the ON -> OFF -> ON sequence twice.
+    -- This is useful on join when the first item-use attempt is blocked
+    -- by the game's safe-zone check. The second ON happens automatically.
+    local FirstAttemptAllowed = CanUseTrapNow(TrapTool)
+
+    if not FirstAttemptAllowed then
+        -- Simulate the first ON being rejected, then turn it OFF.
+        AutoTrapEnabled = false
+        AutoTrapButton.Text = "  AUTO TRAP: RETRYING..."
+        AutoTrapButton.TextColor3 = Color3.fromRGB(255,115,115)
+        SetToggleVisual(AutoTrapButton,false)
+        StatusLabel.Text = "● AUTO TRAP: SAFE ZONE • 1ST ON BLOCKED"
+        StatusLabel.TextColor3 = Color3.fromRGB(255,115,115)
+
+        task.wait(0.75)
+
+        -- Second automatic ON.
+        AutoTrapEnabled = true
+        AutoTrapButton.Text = "  AUTO TRAP: FOREST"
+        AutoTrapButton.TextColor3 = Color3.fromRGB(100,255,130)
+        SetToggleVisual(AutoTrapButton,true)
+
+        -- Check again after the automatic second ON.
+        TrapTool = GetTrapTool()
+        if not TrapTool or not CanUseTrapNow(TrapTool) then
+            AutoTrapEnabled = false
+            AutoTrapBusy = false
+            AutoTrapButton.Text = "  AUTO TRAP: SAFE ZONE • RETRY FAILED"
+            AutoTrapButton.TextColor3 = Color3.fromRGB(255,115,115)
+            SetToggleVisual(AutoTrapButton,false)
+            StatusLabel.Text = "● AUTO TRAP: 2ND ON STILL BLOCKED"
+            StatusLabel.TextColor3 = Color3.fromRGB(255,115,115)
+            return
+        end
+    end
+
+    local Count = 0
+    for Index,Target in ipairs(Targets) do
+        if not AutoTrapEnabled then
+            break
+        end
+
+        if PlaceTrapAtTarget(TrapTool,Target) then
+            Count += 1
+        end
+
+        task.wait(0.15)
+    end
+
+    LastAutoTrap = os.clock()
+
+    -- Allow Bat Auto to resume only after all trap work is finished.
+    AutoTrapBusy = false
+
+    if Count >= MAX_AUTO_TRAPS then
+        -- Exactly 3 traps were sent. Stop completely so the script
+        -- never tries to select/equip another tool afterward.
+        AutoTrapEnabled = false
+        if AutoTrapConnection then
+            AutoTrapConnection = nil
+        end
+
+        AutoTrapButton.Text = "  AUTO TRAP: DONE (3/3)"
+        AutoTrapButton.TextColor3 = Color3.fromRGB(100,255,130)
+        SetToggleVisual(AutoTrapButton,false)
+
+        StatusLabel.Text = "● AUTO TRAP: 3/3 PLACED • STOPPED"
+        StatusLabel.TextColor3 = Color3.fromRGB(100,255,130)
+    elseif Count > 0 then
+        StatusLabel.Text = "● AUTO TRAP: " .. Count .. "/" .. MAX_AUTO_TRAPS .. " SENT"
+        StatusLabel.TextColor3 = Color3.fromRGB(100,255,130)
+    else
+        StatusLabel.Text = "● AUTO TRAP: PLACEMENT FAILED"
+        StatusLabel.TextColor3 = Color3.fromRGB(255,115,115)
+    end
+end
+
+local function StartAutoTrap()
+    if AutoTrapConnection then
+        pcall(function() task.cancel(AutoTrapConnection) end)
+    end
+
+    AutoTrapConnection = task.spawn(function()
+        while AutoTrapEnabled and ScreenGui.Parent do
+            RunAutoTrap()
+            task.wait(0.3)
+        end
+    end)
+end
+
+local function StopAutoTrap()
+    AutoTrapEnabled = false
+    AutoTrapBusy = false
+    if AutoTrapConnection then
+        pcall(function() task.cancel(AutoTrapConnection) end)
+        AutoTrapConnection = nil
+    end
+    AutoTrapButton.Text = "  AUTO TRAP: FOREST"
+    AutoTrapButton.TextColor3 = Color3.fromRGB(238,239,244)
+    SetToggleVisual(AutoTrapButton,false)
+end
+
+AutoTrapButton.MouseButton1Click:Connect(function()
+    AutoTrapEnabled = not AutoTrapEnabled
+    if AutoTrapEnabled then
+        AutoTrapButton.Text = "  AUTO TRAP: FOREST"
+        AutoTrapButton.TextColor3 = Color3.fromRGB(100,255,130)
+        SetToggleVisual(AutoTrapButton,true)
+        StartAutoTrap()
+    else
+        StopAutoTrap()
     end
 end)
 
@@ -1799,6 +2226,11 @@ end
 local function ActivateBat()
 
     if not BatAutoEnabled then
+        return
+    end
+
+    -- Do not let Bat Auto re-equip slot 1 while Auto Trap is placing slot 2.
+    if AutoTrapBusy then
         return
     end
 
@@ -2591,6 +3023,14 @@ task.spawn(function()
 
     SetToggleVisual(BatAutoButton,true)
 
+    --// AUTO TRAP
+    task.wait(0.15)
+    AutoTrapEnabled = true
+    AutoTrapButton.Text = "  AUTO TRAP: FOREST"
+    AutoTrapButton.TextColor3 = Color3.fromRGB(100,255,130)
+    SetToggleVisual(AutoTrapButton,true)
+    StartAutoTrap()
+
     --// FAR CAMERA
     task.wait(0.15)
 
@@ -2698,6 +3138,12 @@ ScreenGui.Destroying:Connect(function()
     DisconnectGodConnections()
 
     BatAutoEnabled = false
+
+    AutoTrapEnabled = false
+    if AutoTrapConnection then
+        pcall(function() task.cancel(AutoTrapConnection) end)
+        AutoTrapConnection = nil
+    end
 
     FarCameraEnabled = false
     StopFarCamera()
