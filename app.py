@@ -662,6 +662,13 @@ h1{
     padding:8px 6px;
 }
 
+.inventory-grid-header{
+    display:grid;
+    grid-template-columns:minmax(180px,2fr) 100px 130px 130px;
+    gap:10px;
+    align-items:center;
+}
+
 .inventory-item{
     display:grid;
     grid-template-columns:minmax(180px,2fr) 100px 130px 130px;
@@ -774,7 +781,7 @@ h1{
             <div>SPEED</div>
             <div>EGGS</div>
             <div>PETS</div>
-            <div>INVENTORY</div>
+            <div>EGG INVENTORY</div>
             <div>LAST SEEN</div>
         </div>
 
@@ -854,10 +861,17 @@ const accountCache = {};
 
 function inventoryItems(account){
     const inv = account.inventory || {};
+
     const pets = Array.isArray(inv.pets) ? inv.pets : [];
     const eggs = Array.isArray(inv.eggs) ? inv.eggs : [];
 
-    return { pets, eggs };
+    return {
+        pets,
+        eggs,
+        ready: inv.ready !== false,
+        totalPets: Number(inv.totalPets ?? pets.length),
+        totalEggs: Number(inv.totalEggs ?? eggs.length)
+    };
 }
 
 function formatCash(value){
@@ -908,18 +922,26 @@ function formatRateValue(value){
 }
 
 function inventoryPreview(account){
-    const {pets, eggs} = inventoryItems(account);
+    const {pets, eggs, ready, totalPets, totalEggs} = inventoryItems(account);
+
+    if(!ready && !eggs.length && !pets.length){
+        return "Waiting for inventory data…";
+    }
+
+    if(!eggs.length && !pets.length){
+        return "No inventory items";
+    }
+
+    const eggText = `${totalEggs.toLocaleString()} egg${totalEggs === 1 ? "" : "s"}`;
+    const petText = `${totalPets.toLocaleString()} pet${totalPets === 1 ? "" : "s"}`;
+
     const names = [
         ...eggs.slice(0,2).map(x => "🥚 " + (x.name || "Egg")),
-        ...pets.slice(0,2).map(x => "🐾 " + (x.name || "Pet"))
+        ...pets.slice(0,1).map(x => "🐾 " + (x.name || "Pet"))
     ];
 
-    if(!names.length) return "No items";
-
-    return names.join(" • ") + (
-        eggs.length + pets.length > names.length
-            ? " • …"
-            : ""
+    return `${eggText} • ${petText}` + (
+        names.length ? ` • ${names.join(" • ")}` : ""
     );
 }
 
@@ -943,8 +965,8 @@ function renderAccounts(data){
             .toUpperCase()
         );
 
-        const {pets, eggs} = inventoryItems(account);
-        const totalInventory = pets.length + eggs.length;
+        const {pets, eggs, totalPets, totalEggs} = inventoryItems(account);
+        const totalInventory = totalPets + totalEggs;
 
         accountCache[String(account.userId)] = account;
 
@@ -977,7 +999,8 @@ function renderAccounts(data){
                     onclick="openInventory(this.dataset.userid)"
                 >
                     <div class="inventory-count">
-                        ${totalInventory.toLocaleString()} item${totalInventory === 1 ? "" : "s"}
+                        🥚 ${totalEggs.toLocaleString()} egg${totalEggs === 1 ? "" : "s"}
+                        ${totalPets ? ` • 🐾 ${totalPets.toLocaleString()} pet${totalPets === 1 ? "" : "s"}` : ""}
                     </div>
                     <div class="inventory-preview">
                         ${esc(inventoryPreview(account))}
@@ -995,18 +1018,24 @@ function openInventory(userId){
 
     if(!account) return;
 
-    const {pets, eggs} = inventoryItems(account);
+    const {pets, eggs, totalPets, totalEggs} = inventoryItems(account);
 
     document.getElementById("modalTitle").textContent =
         `${account.playerName || account.userId} Inventory`;
 
     document.getElementById("modalSubtitle").textContent =
-        `${eggs.length} eggs • ${pets.length} pets`;
+        `${totalEggs} eggs • ${totalPets} pets`;
 
     let html = "";
 
     if(eggs.length){
-        html += `<div class="inventory-section-title">🥚 Eggs</div>`;
+        html += `
+            <div class="inventory-section-title inventory-grid-header">
+                <span>🥚 Eggs</span>
+                <span>WEIGHT</span>
+                <span>CASH</span>
+                <span>TYPE</span>
+            </div>`;
 
         html += eggs.map(item => `
             <div class="inventory-item">
@@ -1029,7 +1058,13 @@ function openInventory(userId){
     }
 
     if(pets.length){
-        html += `<div class="inventory-section-title">🐾 Pets</div>`;
+        html += `
+            <div class="inventory-section-title inventory-grid-header">
+                <span>🐾 Pets</span>
+                <span>WEIGHT</span>
+                <span>CASH</span>
+                <span>RATE</span>
+            </div>`;
 
         html += pets.map(item => {
             const mutations = Array.isArray(item.mutations)
@@ -1133,7 +1168,8 @@ def api_accounts():
                 "pets": [],
                 "eggs": [],
                 "totalPets": 0,
-                "totalEggs": 0
+                "totalEggs": 0,
+                "ready": False
             }),
             "lastSeenText": format_age(
                 time.time() - float(account.get("lastSeen", time.time()))
@@ -1242,14 +1278,16 @@ def heartbeat():
                 ),
                 "totalEggs": int(
                     incoming_inventory.get("totalEggs", len(egg_list)) or 0
-                )
+                ),
+                "ready": incoming_inventory.get("ready", True) is not False
             }
         else:
             inventory = old.get("inventory", {
                 "pets": [],
                 "eggs": [],
                 "totalPets": 0,
-                "totalEggs": 0
+                "totalEggs": 0,
+                "ready": False
             })
 
         accounts[user_id] = {
