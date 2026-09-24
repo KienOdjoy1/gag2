@@ -430,7 +430,7 @@ h1{
 .table-head,
 .account{
     display:grid;
-    grid-template-columns:minmax(210px,2.2fr) 120px 150px 150px 80px 80px 120px;
+    grid-template-columns:minmax(210px,2fr) 105px 135px 135px 70px 70px minmax(190px,1.5fr) 110px;
     align-items:center;
     min-width:900px;
 }
@@ -554,6 +554,161 @@ h1{
     margin-left:5px;
 }
 
+
+.inventory-cell{
+    min-width:0;
+}
+
+.inventory-btn{
+    width:100%;
+    border:1px solid #292d38;
+    background:#15181e;
+    color:#dfe2e8;
+    border-radius:9px;
+    padding:7px 9px;
+    text-align:left;
+    cursor:pointer;
+    font:inherit;
+}
+
+.inventory-btn:hover{
+    background:#1b1f27;
+    border-color:#3a3f4c;
+}
+
+.inventory-count{
+    font-size:12px;
+    font-weight:750;
+}
+
+.inventory-preview{
+    margin-top:3px;
+    color:#777e8c;
+    font-size:10px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.modal{
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(0,0,0,.72);
+    backdrop-filter:blur(6px);
+}
+
+.modal.open{
+    display:flex;
+}
+
+.modal-card{
+    width:min(900px,96vw);
+    max-height:88vh;
+    overflow:hidden;
+    background:#101216;
+    border:1px solid #2a2e38;
+    border-radius:16px;
+    box-shadow:0 30px 90px rgba(0,0,0,.55);
+}
+
+.modal-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+    padding:16px 18px;
+    border-bottom:1px solid var(--line);
+}
+
+.modal-title{
+    font-weight:800;
+    font-size:16px;
+}
+
+.modal-subtitle{
+    color:var(--muted);
+    font-size:11px;
+    margin-top:3px;
+}
+
+.modal-close{
+    border:1px solid #303541;
+    background:#171a21;
+    color:#dfe2e8;
+    border-radius:9px;
+    width:34px;
+    height:34px;
+    cursor:pointer;
+    font-size:18px;
+}
+
+.inventory-list{
+    max-height:70vh;
+    overflow:auto;
+    padding:12px;
+}
+
+.inventory-section-title{
+    color:#8f96a5;
+    font-size:11px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.7px;
+    padding:8px 6px;
+}
+
+.inventory-item{
+    display:grid;
+    grid-template-columns:minmax(180px,2fr) 100px 130px 130px;
+    gap:10px;
+    align-items:center;
+    padding:10px 8px;
+    border-bottom:1px solid #1e2128;
+}
+
+.inventory-item:last-child{
+    border-bottom:0;
+}
+
+.item-name{
+    font-weight:700;
+    font-size:12px;
+}
+
+.item-meta{
+    color:#707785;
+    font-size:10px;
+    margin-top:2px;
+}
+
+.item-value{
+    font-size:11px;
+    font-weight:700;
+}
+
+.item-weight{
+    color:#dfe2e8;
+}
+
+.item-cash{
+    color:#e6e8ec;
+}
+
+.item-rate{
+    color:var(--orange);
+}
+
+@media(max-width:800px){
+    .inventory-item{
+        grid-template-columns:1fr 1fr;
+    }
+}
+
 .empty{
     padding:70px 20px;
     text-align:center;
@@ -619,6 +774,7 @@ h1{
             <div>SPEED</div>
             <div>EGGS</div>
             <div>PETS</div>
+            <div>INVENTORY</div>
             <div>LAST SEEN</div>
         </div>
 
@@ -628,6 +784,20 @@ h1{
 
         <div class="footer">
             Auto-refreshing every 2 seconds • Kyosh Account Monitor
+        </div>
+    </div>
+
+
+    <div class="modal" id="inventoryModal">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-head">
+                <div>
+                    <div class="modal-title" id="modalTitle">Inventory</div>
+                    <div class="modal-subtitle" id="modalSubtitle"></div>
+                </div>
+                <button class="modal-close" onclick="closeInventory()">×</button>
+            </div>
+            <div class="inventory-list" id="inventoryList"></div>
         </div>
     </div>
 
@@ -680,6 +850,79 @@ function renderRate(value){
     return esc(cleaned);
 }
 
+const accountCache = {};
+
+function inventoryItems(account){
+    const inv = account.inventory || {};
+    const pets = Array.isArray(inv.pets) ? inv.pets : [];
+    const eggs = Array.isArray(inv.eggs) ? inv.eggs : [];
+
+    return { pets, eggs };
+}
+
+function formatCash(value){
+    if(value === null || value === undefined || value === "") return "—";
+
+    const n = Number(value);
+
+    if(!Number.isFinite(n)) return esc(value);
+
+    const suffixes = [
+        [1e18, "Qi"],
+        [1e15, "Qa"],
+        [1e12, "T"],
+        [1e9, "B"],
+        [1e6, "M"],
+        [1e3, "K"]
+    ];
+
+    for(const [divisor, suffix] of suffixes){
+        if(Math.abs(n) >= divisor){
+            return "$" + (n / divisor).toFixed(2) + suffix;
+        }
+    }
+
+    return "$" + Math.round(n).toLocaleString();
+}
+
+function formatWeight(value){
+    if(value === null || value === undefined || value === "") return "—";
+
+    const n = Number(value);
+
+    if(!Number.isFinite(n)) return esc(value);
+
+    return n.toLocaleString(undefined, {
+        maximumFractionDigits: 2
+    }) + "Kg";
+}
+
+function formatRateValue(value){
+    if(value === null || value === undefined || value === "") return "—";
+
+    const n = Number(value);
+
+    if(!Number.isFinite(n)) return esc(value);
+
+    return formatCash(n) + "/s";
+}
+
+function inventoryPreview(account){
+    const {pets, eggs} = inventoryItems(account);
+    const names = [
+        ...eggs.slice(0,2).map(x => "🥚 " + (x.name || "Egg")),
+        ...pets.slice(0,2).map(x => "🐾 " + (x.name || "Pet"))
+    ];
+
+    if(!names.length) return "No items";
+
+    return names.join(" • ") + (
+        eggs.length + pets.length > names.length
+            ? " • …"
+            : ""
+    );
+}
+
 function renderAccounts(data){
     const root = document.getElementById("accounts");
 
@@ -694,7 +937,16 @@ function renderAccounts(data){
 
     root.innerHTML = data.accounts.map(account => {
         const online = account.online;
-        const initial = esc((account.playerName || account.userId || "?").charAt(0).toUpperCase());
+        const initial = esc(
+            (account.playerName || account.userId || "?")
+            .charAt(0)
+            .toUpperCase()
+        );
+
+        const {pets, eggs} = inventoryItems(account);
+        const totalInventory = pets.length + eggs.length;
+
+        accountCache[String(account.userId)] = account;
 
         return `
         <div class="account">
@@ -717,10 +969,117 @@ function renderAccounts(data){
             <div class="rate">${renderRate(account.rate)}</div>
             <div class="number">${Number(account.eggs || 0).toLocaleString()}</div>
             <div class="number">${account.pets ?? "—"}</div>
+
+            <div class="inventory-cell">
+                <button
+                    class="inventory-btn"
+                    data-userid="${esc(account.userId || "")}"
+                    onclick="openInventory(this.dataset.userid)"
+                >
+                    <div class="inventory-count">
+                        ${totalInventory.toLocaleString()} item${totalInventory === 1 ? "" : "s"}
+                    </div>
+                    <div class="inventory-preview">
+                        ${esc(inventoryPreview(account))}
+                    </div>
+                </button>
+            </div>
+
             <div class="age">${esc(account.lastSeenText || "—")}</div>
         </div>`;
     }).join("");
 }
+
+function openInventory(userId){
+    const account = accountCache[String(userId)];
+
+    if(!account) return;
+
+    const {pets, eggs} = inventoryItems(account);
+
+    document.getElementById("modalTitle").textContent =
+        `${account.playerName || account.userId} Inventory`;
+
+    document.getElementById("modalSubtitle").textContent =
+        `${eggs.length} eggs • ${pets.length} pets`;
+
+    let html = "";
+
+    if(eggs.length){
+        html += `<div class="inventory-section-title">🥚 Eggs</div>`;
+
+        html += eggs.map(item => `
+            <div class="inventory-item">
+                <div>
+                    <div class="item-name">${esc(item.name || "Egg")}</div>
+                    <div class="item-meta">
+                        ${esc(item.category || "")}
+                        ${item.scale ? " • Scale " + esc(item.scale) : ""}
+                    </div>
+                </div>
+                <div class="item-value item-weight">
+                    ${formatWeight(item.weight)}
+                </div>
+                <div class="item-value item-cash">
+                    ${formatCash(item.cash)}
+                </div>
+                <div class="item-value item-rate">Egg</div>
+            </div>
+        `).join("");
+    }
+
+    if(pets.length){
+        html += `<div class="inventory-section-title">🐾 Pets</div>`;
+
+        html += pets.map(item => {
+            const mutations = Array.isArray(item.mutations)
+                ? item.mutations.filter(Boolean).join(", ")
+                : "";
+
+            return `
+            <div class="inventory-item">
+                <div>
+                    <div class="item-name">${esc(item.name || "Pet")}</div>
+                    <div class="item-meta">
+                        ${esc(item.category || "")}
+                        ${item.favorite ? " • ⭐ Favorite" : ""}
+                        ${item.equipped ? " • Equipped" : ""}
+                        ${mutations ? " • " + esc(mutations) : ""}
+                    </div>
+                </div>
+                <div class="item-value item-weight">
+                    ${formatWeight(item.weight)}
+                </div>
+                <div class="item-value item-cash">
+                    ${formatCash(item.cash)}
+                </div>
+                <div class="item-value item-rate">
+                    ${formatRateValue(item.rate)}
+                </div>
+            </div>
+            `;
+        }).join("");
+    }
+
+    if(!html){
+        html = '<div class="empty">No inventory items were reported.</div>';
+    }
+
+    document.getElementById("inventoryList").innerHTML = html;
+    document.getElementById("inventoryModal").classList.add("open");
+}
+
+function closeInventory(){
+    document.getElementById("inventoryModal").classList.remove("open");
+}
+
+document.getElementById("inventoryModal").addEventListener("click", closeInventory);
+
+document.addEventListener("keydown", event => {
+    if(event.key === "Escape"){
+        closeInventory();
+    }
+});
 
 async function refresh(){
     try{
@@ -770,6 +1129,12 @@ def api_accounts():
             "money": account.get("money"),
             "rate": account.get("rate"),
             "pets": account.get("pets"),
+            "inventory": account.get("inventory", {
+                "pets": [],
+                "eggs": [],
+                "totalPets": 0,
+                "totalEggs": 0
+            }),
             "lastSeenText": format_age(
                 time.time() - float(account.get("lastSeen", time.time()))
             )
@@ -858,6 +1223,35 @@ def heartbeat():
     with state_lock:
         old = accounts.get(user_id, {})
 
+        incoming_inventory = data.get("inventory")
+
+        if isinstance(incoming_inventory, dict):
+            pet_list = incoming_inventory.get("pets", [])
+            egg_list = incoming_inventory.get("eggs", [])
+
+            if not isinstance(pet_list, list):
+                pet_list = []
+            if not isinstance(egg_list, list):
+                egg_list = []
+
+            inventory = {
+                "pets": pet_list[:500],
+                "eggs": egg_list[:500],
+                "totalPets": int(
+                    incoming_inventory.get("totalPets", len(pet_list)) or 0
+                ),
+                "totalEggs": int(
+                    incoming_inventory.get("totalEggs", len(egg_list)) or 0
+                )
+            }
+        else:
+            inventory = old.get("inventory", {
+                "pets": [],
+                "eggs": [],
+                "totalPets": 0,
+                "totalEggs": 0
+            })
+
         accounts[user_id] = {
             "userId": user_id,
             "playerName": player_name,
@@ -866,6 +1260,7 @@ def heartbeat():
             "money": money if money is not None else old.get("money"),
             "rate": rate if rate is not None else old.get("rate"),
             "pets": pets if pets is not None else old.get("pets"),
+            "inventory": inventory,
             "lastSeen": time.time()
         }
 
