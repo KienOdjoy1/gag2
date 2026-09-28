@@ -840,7 +840,7 @@ local function SendHeartbeat(eggCount)
 end
 
 --==============================================================--
--- GUI
+-- GUI - MODERN EGG GAME STYLE
 --==============================================================--
 
 local old = PlayerGui:FindFirstChild("KyoshEggCounter")
@@ -849,43 +849,279 @@ if old then
     old:Destroy()
 end
 
+local TweenService = game:GetService("TweenService")
+
 local Gui = Instance.new("ScreenGui")
 Gui.Name = "KyoshEggCounter"
 Gui.ResetOnSpawn = false
 Gui.IgnoreGuiInset = true
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PlayerGui
 
+--==============================================================--
+-- MAIN CONTAINER
+--==============================================================--
+
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.fromOffset(150, 80)
-Frame.Position = UDim2.new(0.5, -75, 0, 80)
-Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-Frame.BackgroundTransparency = 0.05
+Frame.Name = "EggCounter"
+Frame.Size = UDim2.fromOffset(220, 125)
+Frame.Position = UDim2.new(0.5, -110, 0, 70)
+Frame.BackgroundColor3 = Color3.fromRGB(45, 105, 58)
 Frame.BorderSizePixel = 0
+Frame.ClipsDescendants = false
 Frame.Parent = Gui
 
 local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 12)
+Corner.CornerRadius = UDim.new(0, 22)
 Corner.Parent = Frame
 
+-- Outer border
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(170, 235, 112)
+Stroke.Thickness = 3
+Stroke.Parent = Frame
+
+--==============================================================--
+-- BACKGROUND GRADIENT
+--==============================================================--
+
+local Gradient = Instance.new("UIGradient")
+Gradient.Rotation = 90
+Gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(75, 155, 77)),
+    ColorSequenceKeypoint.new(0.45, Color3.fromRGB(48, 115, 62)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 70, 43))
+})
+Gradient.Parent = Frame
+
+--==============================================================--
+-- SHADOW
+--==============================================================--
+
+local Shadow = Instance.new("Frame")
+Shadow.Name = "Shadow"
+Shadow.Size = UDim2.new(1, 10, 1, 10)
+Shadow.Position = UDim2.fromOffset(5, 8)
+Shadow.BackgroundColor3 = Color3.fromRGB(10, 35, 15)
+Shadow.BackgroundTransparency = 0.35
+Shadow.BorderSizePixel = 0
+Shadow.ZIndex = 0
+Shadow.Parent = Frame
+
+local ShadowCorner = Instance.new("UICorner")
+ShadowCorner.CornerRadius = UDim.new(0, 22)
+ShadowCorner.Parent = Shadow
+
+--==============================================================--
+-- TOP GLOSS
+--==============================================================--
+
+local Gloss = Instance.new("Frame")
+Gloss.Name = "Gloss"
+Gloss.Size = UDim2.new(1, -12, 0, 34)
+Gloss.Position = UDim2.fromOffset(6, 6)
+Gloss.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Gloss.BackgroundTransparency = 0.88
+Gloss.BorderSizePixel = 0
+Gloss.ZIndex = 2
+Gloss.Parent = Frame
+
+local GlossCorner = Instance.new("UICorner")
+GlossCorner.CornerRadius = UDim.new(0, 17)
+GlossCorner.Parent = Gloss
+
+--==============================================================--
+-- EGG CIRCLE
+--==============================================================--
+
+local EggHolder = Instance.new("Frame")
+EggHolder.Name = "EggHolder"
+EggHolder.Size = UDim2.fromOffset(62, 62)
+EggHolder.Position = UDim2.new(0, 12, 0.5, -31)
+EggHolder.BackgroundColor3 = Color3.fromRGB(255, 213, 76)
+EggHolder.BorderSizePixel = 0
+EggHolder.ZIndex = 5
+EggHolder.Parent = Frame
+
+local EggHolderCorner = Instance.new("UICorner")
+EggHolderCorner.CornerRadius = UDim.new(1, 0)
+EggHolderCorner.Parent = EggHolder
+
+local EggHolderStroke = Instance.new("UIStroke")
+EggHolderStroke.Color = Color3.fromRGB(255, 241, 150)
+EggHolderStroke.Thickness = 3
+EggHolderStroke.Parent = EggHolder
+
+-- Egg emoji
+local Egg = Instance.new("TextLabel")
+Egg.Name = "EggIcon"
+Egg.Size = UDim2.fromScale(1, 1)
+Egg.BackgroundTransparency = 1
+Egg.Text = "🥚"
+Egg.TextSize = 36
+Egg.Font = Enum.Font.GothamBold
+Egg.TextColor3 = Color3.fromRGB(255, 255, 255)
+Egg.ZIndex = 6
+Egg.Parent = EggHolder
+
+--==============================================================--
+-- TITLE
+--==============================================================--
+
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 32)
-Title.Position = UDim2.fromOffset(0, 5)
+Title.Name = "Title"
+Title.Size = UDim2.fromOffset(125, 28)
+Title.Position = UDim2.fromOffset(82, 12)
 Title.BackgroundTransparency = 1
-Title.Text = "EGGS"
+Title.Text = "EGG COLLECTION"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 18
-Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBlack
+Title.TextXAlignment = Enum.TextXAlignment.Center
+Title.TextYAlignment = Enum.TextYAlignment.Center
+Title.ZIndex = 6
 Title.Parent = Frame
 
+local TitleStroke = Instance.new("UIStroke")
+TitleStroke.Color = Color3.fromRGB(22, 67, 30)
+TitleStroke.Thickness = 2
+TitleStroke.Parent = Title
+
+--==============================================================--
+-- COUNT
+--==============================================================--
+
 local Count = Instance.new("TextLabel")
-Count.Size = UDim2.new(1, 0, 0, 40)
-Count.Position = UDim2.fromOffset(0, 35)
+Count.Name = "Count"
+Count.Size = UDim2.fromOffset(125, 48)
+Count.Position = UDim2.fromOffset(82, 40)
 Count.BackgroundTransparency = 1
 Count.Text = "0"
-Count.TextColor3 = Color3.fromRGB(255, 255, 255)
-Count.TextSize = 28
-Count.Font = Enum.Font.GothamBold
+Count.TextColor3 = Color3.fromRGB(255, 241, 117)
+Count.TextSize = 36
+Count.Font = Enum.Font.GothamBlack
+Count.TextXAlignment = Enum.TextXAlignment.Center
+Count.TextYAlignment = Enum.TextYAlignment.Center
+Count.ZIndex = 6
 Count.Parent = Frame
+
+local CountStroke = Instance.new("UIStroke")
+CountStroke.Color = Color3.fromRGB(24, 72, 31)
+CountStroke.Thickness = 3
+CountStroke.Parent = Count
+
+--==============================================================--
+-- BOTTOM BADGE
+--==============================================================--
+
+local Badge = Instance.new("Frame")
+Badge.Name = "Badge"
+Badge.Size = UDim2.fromOffset(180, 23)
+Badge.Position = UDim2.new(0.5, -90, 1, -29)
+Badge.BackgroundColor3 = Color3.fromRGB(24, 70, 37)
+Badge.BorderSizePixel = 0
+Badge.ZIndex = 6
+Badge.Parent = Frame
+
+local BadgeCorner = Instance.new("UICorner")
+BadgeCorner.CornerRadius = UDim.new(1, 0)
+BadgeCorner.Parent = Badge
+
+local BadgeStroke = Instance.new("UIStroke")
+BadgeStroke.Color = Color3.fromRGB(115, 190, 90)
+BadgeStroke.Thickness = 1
+BadgeStroke.Transparency = 0.3
+BadgeStroke.Parent = Badge
+
+local Status = Instance.new("TextLabel")
+Status.Name = "Status"
+Status.Size = UDim2.fromScale(1, 1)
+Status.BackgroundTransparency = 1
+Status.Text = "🥚  INVENTORY MONITOR"
+Status.TextColor3 = Color3.fromRGB(220, 255, 205)
+Status.TextSize = 10
+Status.Font = Enum.Font.GothamBold
+Status.TextXAlignment = Enum.TextXAlignment.Center
+Status.TextYAlignment = Enum.TextYAlignment.Center
+Status.ZIndex = 7
+Status.Parent = Badge
+
+--==============================================================--
+-- EGG FLOAT ANIMATION
+--==============================================================--
+
+task.spawn(function()
+    while Gui.Parent do
+
+        local up = TweenService:Create(
+            EggHolder,
+            TweenInfo.new(
+                0.9,
+                Enum.EasingStyle.Sine,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                Position = UDim2.new(0, 12, 0.5, -35),
+                Rotation = 4
+            }
+        )
+
+        up:Play()
+        up.Completed:Wait()
+
+        local down = TweenService:Create(
+            EggHolder,
+            TweenInfo.new(
+                0.9,
+                Enum.EasingStyle.Sine,
+                Enum.EasingDirection.InOut
+            ),
+            {
+                Position = UDim2.new(0, 12, 0.5, -27),
+                Rotation = -4
+            }
+        )
+
+        down:Play()
+        down.Completed:Wait()
+    end
+end)
+
+--==============================================================--
+-- COUNT POP ANIMATION
+--==============================================================--
+
+local LastCount = 0
+
+task.spawn(function()
+    while Gui.Parent do
+        task.wait(0.2)
+
+        local current = tonumber(Count.Text) or 0
+
+        if current ~= LastCount then
+            LastCount = current
+
+            Count.Size = UDim2.fromOffset(140, 55)
+            Count.Position = UDim2.fromOffset(74, 37)
+
+            local pop = TweenService:Create(
+                Count,
+                TweenInfo.new(
+                    0.25,
+                    Enum.EasingStyle.Back,
+                    Enum.EasingDirection.Out
+                ),
+                {
+                    Size = UDim2.fromOffset(125, 48),
+                    Position = UDim2.fromOffset(82, 40)
+                }
+            )
+
+            pop:Play()
+        end
+    end
+end)
 
 --==============================================================--
 -- WAIT FOR INVENTORY
