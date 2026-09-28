@@ -34,7 +34,7 @@ end)
 local MONITOR_URL = "https://khscript.onrender.com/"
 local MONITOR_API_KEY = "KYOSH-12162006"
 
-local HEARTBEAT_INTERVAL = 10
+local HEARTBEAT_INTERVAL = 5
 local INVENTORY_SCAN_INTERVAL = 0.5
 
 --==============================================================--
