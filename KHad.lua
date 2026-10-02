@@ -4385,6 +4385,42 @@ local function setAutoBuy(Enabled)
 end
 
 --============================================================--
+-- AUTO CLAIM FINISHED BREW
+--============================================================--
+-- When the server reports the cauldron as Ready, the game's
+-- CauldronReveal packet is the claim/reveal action. This helper
+-- keeps that action explicit and prevents the Auto Brew loop from
+-- starting another brew before the finished brew is claimed.
+--============================================================--
+
+local function autoClaimFinishedBrew()
+
+    local Success,
+        Revealed,
+        Message,
+        Failed,
+        OutputName,
+        Amount =
+
+        pcall(
+            function()
+
+                return
+                    CauldronReveal:Fire()
+
+            end
+        )
+
+    return
+        Success,
+        Revealed,
+        Message,
+        Failed,
+        OutputName,
+        Amount
+end
+
+--============================================================--
 -- AUTO BREW LOOP
 --============================================================--
 
@@ -4551,9 +4587,10 @@ local function startAutoBrewLoop()
                         == "Ready" then
 
                         Status.Text =
-                            "REVEALING • "
+                            "AUTO CLAIMING • "
                             .. Recipe.Name
 
+                        -- The brew is finished. Automatically claim/reveal it now.
                         local Success,
                             Revealed,
                             Message,
@@ -4561,14 +4598,7 @@ local function startAutoBrewLoop()
                             OutputName,
                             Amount =
 
-                            pcall(
-                                function()
-
-                                    return
-                                        CauldronReveal:Fire()
-
-                                end
-                            )
+                            autoClaimFinishedBrew()
 
                         if Success
                             and Revealed then
