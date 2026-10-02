@@ -11,7 +11,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local CollectionService = game:GetService("CollectionService")
 local PathfindingService = game:GetService("PathfindingService")
@@ -180,8 +179,6 @@ local AutoKillWalkSpeed = 35
 local AutoKillOriginalWalkSpeed = nil
 local AutoKillShovel = nil
 local AutoKillPumpkinTarget = nil
-local AutoKillMoveTween = nil
-local AutoKillTweenSpeed = 35
 
 local AutoSaveFailedCraft = false
 
@@ -3408,171 +3405,56 @@ local function getNearestMonster()
     return Best
 end
 
---============================================================--
--- AUTO KILL // MAP COLLISION + TWEEN CHASE
---============================================================--
-
-local function prepareMapCollision()
-
-    local Map = workspace:FindFirstChild("Map")
-    if not Map then
-        return
-    end
-
-    -- Middle and Stands are treated as real obstacles.
-    -- Pathfinding can then route around their collidable parts
-    -- instead of letting the character enter their geometry.
-    for _, Name in ipairs({"Middle", "Stands"}) do
-
-        local Folder = Map:FindFirstChild(Name)
-
-        if Folder then
-            for _, Object in ipairs(Folder:GetDescendants()) do
-                if Object:IsA("BasePart") then
-                    pcall(function()
-                        Object.CanCollide = true
-                    end)
-                end
-            end
-        end
-
-    end
-end
-
-local function stopAutoKillMoveTween()
-
-    if AutoKillMoveTween then
-        pcall(function()
-            AutoKillMoveTween:Cancel()
-        end)
-        AutoKillMoveTween = nil
-    end
-end
-
-local function tweenToPosition(Position, Speed)
-
-    local _, Root =
-        getCharacterParts()
-
-    if not Root then
-        return false
-    end
-
-    stopAutoKillMoveTween()
-
-    local Distance =
-        (Root.Position - Position).Magnitude
-
-    if Distance <= 1.5 then
-        return true
-    end
-
-    local MoveSpeed =
-        math.max(10, tonumber(Speed) or AutoKillTweenSpeed)
-
-    local Duration =
-        math.clamp(Distance / MoveSpeed, 0.08, 2.5)
-
-    local Goal = {
-        CFrame = CFrame.new(
-            Position,
-            Position + Root.CFrame.LookVector
-        ),
-    }
-
-    local Tween =
-        TweenService:Create(
-            Root,
-            TweenInfo.new(
-                Duration,
-                Enum.EasingStyle.Linear,
-                Enum.EasingDirection.Out
-            ),
-            Goal
-        )
-
-    AutoKillMoveTween = Tween
-
-    local Completed = false
-    local Connection =
-        Tween.Completed:Connect(function()
-            Completed = true
-        end)
-
-    Tween:Play()
-
-    while AutoKill
-        and not Destroyed
-        and not Completed
-        and Root.Parent do
-
-        task.wait()
-    end
-
-    Connection:Disconnect()
-
-    if AutoKillMoveTween == Tween then
-        AutoKillMoveTween = nil
-    end
-
-    return Completed
-end
-
 local function moveTowardMonster(Monster)
 
-    local _, Root =
+    local Humanoid, Root =
         getCharacterParts()
 
     local MonsterRoot =
         getMonsterRoot(Monster)
 
-    if not Root or not MonsterRoot then
+    if not Humanoid
+        or not Root
+        or not MonsterRoot then
+
         return false
     end
 
-    -- Stop about 8 studs away so the character does not enter
-    -- the monster or the surrounding map geometry.
-    local Offset =
-        Root.Position - MonsterRoot.Position
-
-    if Offset.Magnitude < 0.1 then
-        Offset = Vector3.new(0, 0, 1)
-    end
-
-    local StopPosition =
-        MonsterRoot.Position
-        + Offset.Unit * 8
-
-    return tweenToPosition(
-        StopPosition,
-        AutoKillTweenSpeed
+    -- Pass the monster part as WalkToPart so Roblox keeps the
+    -- destination attached to a moving monster.
+    Humanoid:MoveTo(
+        MonsterRoot.Position,
+        MonsterRoot
     )
+
+    return true
 end
 
 local function tryPathTowardMonster(Monster)
 
-    local _, Root =
+    local Humanoid, Root =
         getCharacterParts()
 
     local MonsterRoot =
         getMonsterRoot(Monster)
 
-    if not Root or not MonsterRoot then
+    if not Humanoid
+        or not Root
+        or not MonsterRoot then
+
         return false
     end
-
-    prepareMapCollision()
 
     local Success, Path =
         pcall(function()
 
             local NewPath =
                 PathfindingService:CreatePath({
-                    AgentRadius = 2.5,
+                    AgentRadius = 2,
                     AgentHeight = 5,
                     AgentCanJump = true,
                     AgentCanClimb = true,
-                    WaypointSpacing = 4,
+                    WaypointSpacing = 5,
                 })
 
             NewPath:ComputeAsync(
@@ -3597,55 +3479,20 @@ local function tryPathTowardMonster(Monster)
         return moveTowardMonster(Monster)
     end
 
-    -- Move through only the next waypoint, then recompute.
-    -- This prevents getting trapped when the monster moves.
     local NextWaypoint =
         Waypoints[2]
 
     if NextWaypoint.Action
         == Enum.PathWaypointAction.Jump then
 
-        local Humanoid =
-            select(1, getCharacterParts())
-
-        if Humanoid then
-            Humanoid.Jump = true
-        end
+        Humanoid.Jump = true
     end
 
-    return tweenToPosition(
-        NextWaypoint.Position,
-        AutoKillTweenSpeed
+    Humanoid:MoveTo(
+        NextWaypoint.Position
     )
-end
 
-local function moveTowardPumpkin(Pumpkin)
-
-    local _, Root =
-        getCharacterParts()
-
-    local PumpkinRoot =
-        getPumpkinRoot(Pumpkin)
-
-    if not Root or not PumpkinRoot then
-        return false
-    end
-
-    local Offset =
-        Root.Position - PumpkinRoot.Position
-
-    if Offset.Magnitude < 0.1 then
-        Offset = Vector3.new(0, 0, 1)
-    end
-
-    local StopPosition =
-        PumpkinRoot.Position
-        + Offset.Unit * 8
-
-    return tweenToPosition(
-        StopPosition,
-        AutoKillTweenSpeed
-    )
+    return true
 end
 
 local function getShovelTool()
@@ -4902,7 +4749,6 @@ local function startAutoKillLoop()
     end
 
     setAutoKillSpeed(true)
-    prepareMapCollision()
 
     AutoKillThread =
         task.spawn(
@@ -5036,9 +4882,11 @@ local function startAutoKillLoop()
                                 )
                                 .. " studs"
 
-                            moveTowardPumpkin(Pumpkin)
+                            Humanoid:MoveTo(
+                                PumpkinRoot.Position
+                            )
 
-                            task.wait(0.02)
+                            task.wait(0.08)
 
                         else
 
@@ -5098,12 +4946,13 @@ local function startAutoKillLoop()
                             )
                             .. " studs"
 
-                        -- Use a short path segment + linear tween.
-                        -- The path is recomputed frequently so Middle/Stands
-                        -- and moving monsters do not trap the character.
-                        tryPathTowardMonster(Target)
+                        moveTowardMonster(Target)
 
-                        task.wait(0.02)
+                        if Distance > 35 then
+                            tryPathTowardMonster(Target)
+                        end
+
+                        task.wait(0.08)
 
                     else
 
@@ -5158,7 +5007,6 @@ local function startAutoKillLoop()
 
                 end
 
-                stopAutoKillMoveTween()
                 stopAutoKillShovelAnimation()
                 setAutoKillSpeed(false)
                 AutoKillShovel = nil
@@ -5183,7 +5031,6 @@ local function setAutoKill(Enabled)
 
     if not AutoKill then
         CurrentKillTarget = nil
-        stopAutoKillMoveTween()
         stopAutoKillShovelAnimation()
         setAutoKillSpeed(false)
         AutoKillShovel = nil
